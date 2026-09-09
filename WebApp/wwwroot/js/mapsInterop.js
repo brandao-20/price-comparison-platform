@@ -1,12 +1,8 @@
-console.log("[DEBUG] Início do carregamento de mapsInterop.js");
-
 window.mapsInterop = window.mapsInterop || {};
 
-console.log("[DEBUG] window.mapsInterop definido:", window.mapsInterop);
 
 // Função para carregar a API do Google Maps e o MarkerClusterer
 window.mapsInterop.loadGoogleMaps = function (apiKey) {
-    console.log("[DEBUG] loadGoogleMaps chamado com API Key:", apiKey);
 
     // Carrega o script do Google Maps
     if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
@@ -17,12 +13,7 @@ window.mapsInterop.loadGoogleMaps = function (apiKey) {
         googleMapsScript.onerror = function () {
             console.error("[ERROR] Falha ao carregar o script do Google Maps.");
         };
-        googleMapsScript.onload = function () {
-            console.log("[DEBUG] Script do Google Maps carregado com sucesso.");
-        };
         document.head.appendChild(googleMapsScript);
-    } else {
-        console.log("[DEBUG] Script do Google Maps já está no DOM.");
     }
 
     // Carrega o script do MarkerClusterer com uma versão específica
@@ -35,12 +26,10 @@ window.mapsInterop.loadGoogleMaps = function (apiKey) {
             console.error("[ERROR] Falha ao carregar o script do MarkerClusterer.");
         };
         clusterScript.onload = function () {
-            console.log("[DEBUG] Script do MarkerClusterer carregado com sucesso.");
             window.markerClustererLoaded = true;
         };
         document.head.appendChild(clusterScript);
     } else {
-        console.log("[DEBUG] Script do MarkerClusterer já está no DOM.");
         window.markerClustererLoaded = true;
     }
 };
@@ -48,7 +37,6 @@ window.mapsInterop.loadGoogleMaps = function (apiKey) {
 // Inicializa o Google Maps quando o script é carregado
 window.initMap = function () {
     window.googleMapsLoaded = true;
-    console.log("[DEBUG] Google Maps API carregada com sucesso via initMap!");
 };
 
 window.mapsInterop.getUserLocation = async function () {
@@ -56,7 +44,6 @@ window.mapsInterop.getUserLocation = async function () {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    console.log("[DEBUG] Geolocalização obtida com sucesso:", position.coords.latitude, position.coords.longitude);
                     resolve({
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
@@ -79,7 +66,6 @@ window.mapsInterop.getUserLocation = async function () {
 async function waitForMarkerClusterer(maxAttempts = 100, delayMs = 100) {
     let attempts = 0;
     while (!window.markerClustererLoaded && attempts < maxAttempts) {
-        console.log(`[DEBUG] Aguardando MarkerClusterer... Tentativa ${attempts + 1}/${maxAttempts}`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
         attempts++;
     }
@@ -110,7 +96,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
         return;
     }
 
-    console.log("[DEBUG] Buscando supermercados em lat:", lat, "lng:", lng);
     const userLocation = new google.maps.LatLng(lat, lng);
     const mapElement = document.getElementById(elementId);
     if (!mapElement) {
@@ -127,7 +112,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
         mapId: "7af9339427e7484e" // Map ID configurado
     });
 
-    console.log("[DEBUG] Mapa inicializado com mapId:", map.getMapId());
 
     const service = new google.maps.places.PlacesService(map);
     let allSupermarkets = [];
@@ -152,10 +136,8 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
                             type === "food" ||
                             type === "store"
                         ) && !types.includes("gas_station");
-                        console.log(`[DEBUG] Lugar: ${place.name}, Tipos: ${types}, Relevante: ${isRelevant}`);
                         return isRelevant;
                     });
-                    console.log(`[DEBUG] Resultados encontrados para localização ${location.lat()}:${location.lng()}:`, filteredResults.length);
                     resolve(filteredResults);
                 } else {
                     console.error("[ERROR] Falha ao buscar supermercados:", status);
@@ -166,7 +148,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
     }
 
     // Busca local (próxima ao usuário) com raio de 15 km
-    console.log("[DEBUG] Buscando supermercados na localização do usuário...");
     const localSupermarkets = await searchSupermarkets(
         userLocation,
         15000,
@@ -175,7 +156,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
     allSupermarkets = allSupermarkets.concat(localSupermarkets);
 
     // Busca em cidades do norte de Portugal (raio de 10 km por cidade)
-    console.log("[DEBUG] Buscando supermercados em cidades do norte de Portugal...");
     for (const cidade of cidadesPortugal) {
         const cidadeLocation = new google.maps.LatLng(cidade.lat, cidade.lng);
         const cidadeSupermarkets = await searchSupermarkets(
@@ -188,7 +168,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
 
     // Remove duplicatas com base no place_id
     const uniqueSupermarkets = Array.from(new Map(allSupermarkets.map(place => [place.place_id, place])).values());
-    console.log("[DEBUG] Supermercados únicos encontrados:", uniqueSupermarkets.length);
 
     // Mapeia os resultados para o formato desejado
     const supermarkets = uniqueSupermarkets.map(place => ({
@@ -198,7 +177,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng()
     }));
-    console.log("[DEBUG] Supermercados formatados:", supermarkets);
 
     // Limpa marcadores anteriores
     if (window.currentMarkers) {
@@ -208,7 +186,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
 
     // Verifica se AdvancedMarkerElement está disponível
     const useAdvancedMarkers = window.google.maps.marker && window.google.maps.marker.AdvancedMarkerElement;
-    console.log("[DEBUG] AdvancedMarkerElement disponível:", useAdvancedMarkers);
 
     // Cria os marcadores
     const markers = supermarkets.map((supermarket, index) => {
@@ -219,7 +196,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
                 title: supermarket.name,
                 content: createCustomMarkerIcon()
             });
-            console.log(`[DEBUG] Marcador avançado criado para ${supermarket.name} (${supermarket.lat}, ${supermarket.lng}) - Índice: ${index}`);
             return marker;
         } else {
             console.warn("[WARN] Usando marcadores padrão como fallback devido à falta de AdvancedMarkerElement.");
@@ -231,7 +207,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
                     url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
                 }
             });
-            console.log(`[DEBUG] Marcador padrão criado para ${supermarket.name} (${supermarket.lat}, ${supermarket.lng}) - Índice: ${index}`);
             return marker;
         }
     });
@@ -239,7 +214,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
     // Adiciona clustering para evitar sobreposição
     const markerClustererAvailable = await waitForMarkerClusterer();
     if (markerClustererAvailable && typeof MarkerClusterer !== "undefined") {
-        console.log("[DEBUG] MarkerClusterer disponível, aplicando clustering.");
         const markerCluster = new MarkerClusterer({
             map: map,
             markers: markers,
@@ -251,7 +225,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
                             map: map,
                             content: createClusterIcon(count)
                         });
-                        console.log(`[DEBUG] Cluster avançado criado com ${count} marcadores em (${position.lat()}, ${position.lng()})`);
                         return clusterMarker;
                     } else {
                         const clusterMarker = new google.maps.Marker({
@@ -268,7 +241,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
                                 fontWeight: "bold"
                             }
                         });
-                        console.log(`[DEBUG] Cluster padrão criado com ${count} marcadores em (${position.lat()}, ${position.lng()})`);
                         return clusterMarker;
                     }
                 }
@@ -278,7 +250,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
         console.warn("[WARN] MarkerClusterer não disponível, marcadores exibidos sem clustering.");
         markers.forEach((marker, index) => {
             marker.setMap(map);
-            console.log(`[DEBUG] Marcador ${index} exibido sem clustering.`);
         });
     }
 
@@ -290,15 +261,21 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
             console.warn(`[WARN] Supermercado não encontrado para o marcador no índice ${index}`);
             return;
         }
-        const infowindow = new google.maps.InfoWindow({
-            content: `
-                <div style="font-family: Arial, sans-serif;">
-                    <h5 style="margin: 0 0 5px 0; font-size: 16px;">${supermarket.name}</h5>
-                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #555;">${supermarket.address}</p>
-                    <button onclick="window.selectSupermarket('${supermarket.placeId}')" style="background-color: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.3s;">Selecionar</button>
-                </div>
-            `
-        });
+        // Treat provider/store text as text, not HTML or JavaScript.
+        const content = document.createElement("div");
+        content.style.fontFamily = "Arial, sans-serif";
+        const title = document.createElement("h5");
+        title.style.cssText = "margin: 0 0 5px 0; font-size: 16px;";
+        title.textContent = supermarket.name;
+        const address = document.createElement("p");
+        address.style.cssText = "margin: 0 0 10px 0; font-size: 14px; color: #555;";
+        address.textContent = supermarket.address;
+        const select = document.createElement("button");
+        select.style.cssText = "background-color: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.3s;";
+        select.textContent = "Select";
+        select.addEventListener("click", () => window.selectSupermarket(supermarket.placeId));
+        content.append(title, address, select);
+        const infowindow = new google.maps.InfoWindow({ content });
 
         marker.addListener("click", () => {
             if (currentInfoWindow) {
@@ -306,7 +283,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
             }
             infowindow.open(map, marker);
             currentInfoWindow = infowindow;
-            console.log(`[DEBUG] InfoWindow aberto para ${supermarket.name}`);
         });
 
         window.currentMarkers.push(marker);
@@ -315,7 +291,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
     window.selectSupermarket = function (placeId) {
         const supermarket = supermarkets.find(s => s.placeId === placeId);
         if (supermarket) {
-            console.log(`[DEBUG] Supermercado selecionado: ${supermarket.name}`);
             dotNetRef.invokeMethodAsync("SelectSupermarket", supermarket);
         } else {
             console.warn("[WARN] Supermercado com placeId não encontrado:", placeId);
@@ -334,7 +309,6 @@ window.mapsInterop.findNearbySupermarkets = async function (lat, lng, elementId,
         setTimeout(() => {
             map.setCenter(userLocation);
             map.setZoom(12);
-            console.log("[DEBUG] Mapa centralizado na localização do usuário com zoom 12.");
         }, 1000);
     } else {
         console.warn("[WARN] Nenhum supermercado encontrado para exibir no mapa.");
@@ -409,7 +383,6 @@ window.mapsInterop.focusOnSupermarket = function (elementId, lat, lng) {
     }
     map.setCenter({ lat: lat, lng: lng });
     map.setZoom(15);
-    console.log(`[DEBUG] Foco ajustado para o supermercado em (${lat}, ${lng})`);
 };
 
 window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef) {
@@ -417,7 +390,6 @@ window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef)
         console.error("[ERROR] Google Maps API não carregado ou chave inválida.");
         return;
     }
-    console.log("[DEBUG] Inicializando mapa com lat:", lat, "lng:", lng, "elementId:", elementId);
     const center = { lat: parseFloat(lat), lng: parseFloat(lng) };
     const mapElement = document.getElementById(elementId);
     if (!mapElement) {
@@ -435,7 +407,6 @@ window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef)
     });
     mapElement.__googleMap = map;
 
-    console.log("[DEBUG] Mapa inicializado com mapId:", map.getMapId());
 
     // Verifica se AdvancedMarkerElement está disponível
     const useAdvancedMarkers = window.google.maps.marker && window.google.maps.marker.AdvancedMarkerElement;
@@ -447,7 +418,6 @@ window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef)
             draggable: true,
             content: createCustomMarkerIcon()
         });
-        console.log("[DEBUG] Marcador avançado criado para o usuário em:", center);
     } else {
         console.warn("[WARN] Usando marcador padrão como fallback para o marcador do usuário.");
         userMarker = new google.maps.Marker({
@@ -458,7 +428,6 @@ window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef)
                 url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
             }
         });
-        console.log("[DEBUG] Marcador padrão criado para o usuário em:", center);
     }
 
     const geocoder = new google.maps.Geocoder();
@@ -466,11 +435,9 @@ window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef)
         const latClicked = e.latLng.lat();
         const lngClicked = e.latLng.lng();
         userMarker.position = new google.maps.LatLng(latClicked, lngClicked);
-        console.log("[DEBUG] Mapa clicado. Novas coordenadas:", latClicked, lngClicked);
         geocoder.geocode({ location: { lat: latClicked, lng: latClicked } }, function (results, status) {
             if (status === google.maps.GeocoderStatus.OK && results[0]) {
                 const endereco = results[0].formatted_address;
-                console.log("[DEBUG] Endereço obtido:", endereco);
                 dotNetRef.invokeMethodAsync("SetCoordinatesWithAddress", latClicked, lngClicked, endereco);
             } else {
                 console.error("[ERROR] Falha na geocodificação:", status);
@@ -486,7 +453,6 @@ window.mapsInterop.initMapaLojaClick = function (lat, lng, elementId, dotNetRef)
 };
 
 window.mapsInterop.initStreetView = function (elementId, lat, lng) {
-    console.log(`[DEBUG] Inicializando Street View para lat: ${lat} lng: ${lng} elementId: ${elementId}`);
     const location = new google.maps.LatLng(lat, lng);
     const panorama = new google.maps.StreetViewPanorama(
         document.getElementById(elementId),
@@ -506,12 +472,9 @@ window.mapsInterop.initStreetView = function (elementId, lat, lng) {
     streetViewService.getPanorama({ location: location, radius: 50 }, (data, status) => {
         if (status === google.maps.StreetViewStatus.OK) {
             panorama.setPosition(location);
-            console.log("[DEBUG] Street View disponível e inicializado.");
         } else {
             console.warn(`[WARN] Street View não disponível para lat: ${lat} lng: ${lng}`);
             document.getElementById(elementId).innerHTML = "<p>Street View não disponível neste local.</p>";
         }
     });
 };
-
-console.log("[DEBUG] Fim do carregamento de mapsInterop.js");

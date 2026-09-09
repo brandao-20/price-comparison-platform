@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @inject WebApp.Services.AuthService AuthService
 @inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+@inject Microsoft.AspNetCore.SignalR.Client.HubConnection Notifications
 @using WebApp.Models
 @using WebApp.Pages.ChatBot
 
@@ -56,9 +58,11 @@
 </div>
 
 @code {
-    private void HandleLogout()
+    private async Task HandleLogout()
     {
+        await LocalStorage.RemoveItemAsync("authToken");
         AuthService.Clear();
+        await Notifications.StopAsync();
         Navigation.NavigateTo("/");
     }
 

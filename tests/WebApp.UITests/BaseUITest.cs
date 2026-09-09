@@ -8,10 +8,10 @@ namespace WebApp.UITests
 {
     public class BaseUITest
     {
-        protected IWebDriver Driver;
+        protected IWebDriver Driver = null!;
 
         // Ajusta a porta se a tua app arrancar noutro URL
-        protected const string AppUrl = "http://localhost:5116";
+        protected static string AppUrl => Environment.GetEnvironmentVariable("UI_TESTS_APP_URL") ?? "http://localhost:5116";
 
         [SetUp]
         public void SetUp()

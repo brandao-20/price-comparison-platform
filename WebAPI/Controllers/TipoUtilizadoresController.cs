@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WebAPI.Entities;
 using WebAPI.Repositories;
 
@@ -30,6 +31,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<TipoUtilizador>> Create(TipoUtilizador tipo)
         {
             await _tipoUtilizadorRepository.AddAsync(tipo);
@@ -37,6 +39,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, TipoUtilizador tipo)
         {
             if (id != tipo.TipoUtilizadorId) return BadRequest();
@@ -53,6 +56,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var tipo = await _tipoUtilizadorRepository.GetByIdAsync(id);

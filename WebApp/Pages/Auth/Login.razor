@@ -1,9 +1,10 @@
-﻿@page "/login"
+@page "/login"
 @using System.Net.Http.Json
 @using System.IdentityModel.Tokens.Jwt
 @using System.Security.Claims
 @using WebApp.Components
 @inject HttpClient Http
+@inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject WebApp.Services.AuthService AuthService
@@ -43,19 +44,37 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Verifica se há um erro ou token do Google na URL
-        var uri = new Uri(Navigation.Uri);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var query = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query);
         var error = query["error"];
-        var googleToken = query["googleToken"];
+        var code = query["code"];
+        if (!string.IsNullOrEmpty(error) || !string.IsNullOrEmpty(code))
+            Navigation.NavigateTo("/login", replace: true);
 
         if (!string.IsNullOrEmpty(error))
         {
-            ShowPopup("Falha no login com Google: " + error, MessagePopup.MessageType.Error);
+            await JS.InvokeAsync<string?>("oauthLogin.takeVerifier");
+            ShowPopup("Google login is unavailable or was cancelled. Please try again.", MessagePopup.MessageType.Error);
         }
-        else if (!string.IsNullOrEmpty(googleToken))
+        else if (!string.IsNullOrEmpty(code))
         {
-            await HandleGoogleLogin(googleToken);
+            try
+            {
+                var verifier = await JS.InvokeAsync<string?>("oauthLogin.takeVerifier");
+                if (string.IsNullOrEmpty(verifier))
+                    throw new InvalidOperationException("The login request has expired.");
+                using var response = await Http.PostAsJsonAsync("api/ExternalLogin/exchange", new { Code = code, Verifier = verifier });
+                response.EnsureSuccessStatusCode();
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (string.IsNullOrEmpty(result?.Token))
+                    throw new InvalidOperationException("The login response is invalid.");
+                await HandleGoogleLogin(result.Token);
+            }
+            catch (Exception)
+            {
+                AuthService.Clear();
+                await LocalStorage.RemoveItemAsync("authToken");
+                ShowPopup("Google login could not be completed. Start the login again.", MessagePopup.MessageType.Error);
+            }
         }
     }
 
@@ -131,6 +150,8 @@
         try
         {
             AuthService.Token = googleToken;
+            if (!AuthService.ValidateToken())
+                throw new InvalidOperationException("The login token is invalid or expired.");
             await LocalStorage.SetItemAsync("authToken", googleToken);
 
             var handler = new JwtSecurityTokenHandler();
@@ -163,15 +184,19 @@
             else
                 Navigation.NavigateTo("/homeuser");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            ShowPopup($"Erro ao processar login com Google: {ex.Message}", MessagePopup.MessageType.Error);
+            AuthService.Clear();
+            await LocalStorage.RemoveItemAsync("authToken");
+            ShowPopup("Google login could not be completed. Please try again.", MessagePopup.MessageType.Error);
         }
     }
 
-    private void LoginWithGoogle()
+    private async Task LoginWithGoogle()
     {
-        Navigation.NavigateTo("http://localhost:5000/api/ExternalLogin/Google", forceLoad: true);
+        var challenge = await JS.InvokeAsync<string>("oauthLogin.begin");
+        var url = new Uri(Http.BaseAddress!, $"api/ExternalLogin/Google?challenge={Uri.EscapeDataString(challenge)}");
+        Navigation.NavigateTo(url.AbsoluteUri, forceLoad: true);
     }
 
     private void ShowPopup(string message, MessagePopup.MessageType type)

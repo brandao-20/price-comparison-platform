@@ -149,11 +149,6 @@ else
                     {
                         categorias = apiResponse.Data ?? new List<Categoria>();
                         parentCategorias = categorias.Where(c => c.ParentId == null).OrderBy(c => c.Nome).ToList();
-                        Console.WriteLine($"[DEBUG] Categorias pai carregadas: {parentCategorias.Count}");
-                        foreach (var cat in parentCategorias)
-                        {
-                            Console.WriteLine($"[DEBUG] Categoria pai: {cat.Nome}, Subcategorias: {(cat.SubCategorias != null ? cat.SubCategorias.Count : 0)}");
-                        }
                     }
                     else
                     {
@@ -199,11 +194,6 @@ else
                             if (parentCategoria != null && parentCategoria.SubCategorias?.Any() == true)
                             {
                                 subCategorias = CategoriaSubcategorias.Achatadas(parentCategoria.SubCategorias);
-                                Console.WriteLine($"[DEBUG] Subcategorias achatadas para edição: {subCategorias.Count}");
-                                foreach (var subCat in subCategorias)
-                                {
-                                    Console.WriteLine($"[DEBUG] Subcategoria: {subCat.NomeExibicao}");
-                                }
                             }
                         }
                         else if (parentCategorias.Any())
@@ -265,20 +255,13 @@ else
             var selectedParent = categorias.FirstOrDefault(c => c.CategoriaId == selectedParentCategoriaId);
             if (selectedParent != null)
             {
-                Console.WriteLine($"[DEBUG] Categoria pai selecionada: {selectedParent.Nome}, Subcategorias: {(selectedParent.SubCategorias != null ? selectedParent.SubCategorias.Count : 0)}");
                 if (selectedParent.SubCategorias?.Any() == true)
                 {
                     subCategorias = CategoriaSubcategorias.Achatadas(selectedParent.SubCategorias);
-                    Console.WriteLine($"[DEBUG] Subcategorias achatadas: {subCategorias.Count}");
-                    foreach (var subCat in subCategorias)
-                    {
-                        Console.WriteLine($"[DEBUG] Subcategoria: {subCat.NomeExibicao}");
-                    }
                 }
                 else
                 {
                     subCategorias.Clear();
-                    Console.WriteLine("[DEBUG] Nenhuma subcategoria disponível para esta categoria pai.");
                 }
             }
         }
@@ -314,7 +297,6 @@ else
             produto.CategoriaId = selectedSubCategoriaId != 0 ? selectedSubCategoriaId : selectedParentCategoriaId;
             produto.Categoria = null;
 
-            Console.WriteLine($"[DEBUG] Atualizando produto: ID={produto.ProdutoId}, Nome={produto.Nome}, Marca={produto.Marca}, CategoriaId={produto.CategoriaId}");
 
             var response = await Http.PutAsJsonAsync($"api/Produtos/{id}", produto);
             var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();

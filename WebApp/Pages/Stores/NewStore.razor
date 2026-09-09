@@ -106,11 +106,6 @@ else
             if (response != null)
             {
                 existingStores = response;
-                Console.WriteLine($"[DEBUG] Lojas existentes carregadas: {existingStores.Count} lojas.");
-                foreach (var store in existingStores)
-                {
-                    Console.WriteLine($"[DEBUG] Loja ID: {store.LojaId}, Nome: {store.Nome}, Endereço: {store.Endereco}, PlaceId: {store.PlaceId}, Lat: {store.Localizacao?.Latitude}, Lng: {store.Localizacao?.Longitude}");
-                }
             }
         }
         catch (Exception ex)
@@ -124,7 +119,12 @@ else
     {
         try
         {
-            var apiKey = Configuration["GoogleMapsApiKey"] ?? "SUA_CHAVE_AQUI";
+            var apiKey = Configuration["GoogleMapsApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                ShowPopup("Google Maps is not configured. Store lookup is unavailable.", MessagePopup.MessageType.Error);
+                return;
+            }
             if (!googleMapsLoaded)
             {
                 await JSRuntime.InvokeVoidAsync("mapsInterop.loadGoogleMaps", apiKey);
@@ -138,11 +138,10 @@ else
             tempLatitude = Convert.ToDecimal(location.Lat);
             tempLongitude = Convert.ToDecimal(location.Lng);
             locationObtained = true;
-            Console.WriteLine($"[DEBUG] Localização do usuário obtida: Lat {tempLatitude}, Lng {tempLongitude}");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Não foi possível obter a localização do usuário: {ex.Message}. Usando fallback (Lisboa).");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             tempLatitude = 38.7223m;
             tempLongitude = -9.1393m;
             locationObtained = true;
@@ -152,14 +151,12 @@ else
     private async Task HandleMapInitialized(string mapElementId)
     {
         currentMapElementId = mapElementId;
-        Console.WriteLine($"[DEBUG] Mapa inicializado com ID: {currentMapElementId}");
 
         await JSRuntime.InvokeVoidAsync("mapsInterop.focusOnSupermarket", currentMapElementId, (double)tempLatitude, (double)tempLongitude);
         
         // Busca automática de supermercados
         try
         {
-            Console.WriteLine($"[DEBUG] Buscando supermercados em Lat {tempLatitude}, Lng {tempLongitude}");
             await JSRuntime.InvokeVoidAsync("mapsInterop.findNearbySupermarkets", (double)tempLatitude, (double)tempLongitude, currentMapElementId, _objectRef);
         }
         catch (Exception ex)
@@ -180,15 +177,13 @@ else
                 var loaded = await JSRuntime.InvokeAsync<bool>("eval", "typeof google !== 'undefined' && typeof google.maps !== 'undefined' && window.googleMapsLoaded === true");
                 if (loaded)
                 {
-                    Console.WriteLine("[DEBUG] Google Maps API carregada com sucesso.");
                     return;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"[DEBUG] Erro ao verificar Google Maps API: {ex.Message}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             }
-            Console.WriteLine($"[DEBUG] Aguardando Google Maps API... Tentativa {attempts + 1}/{maxAttempts}");
             await Task.Delay(100);
             attempts++;
         }
@@ -206,15 +201,13 @@ else
                 bool isUndefined = await JSRuntime.InvokeAsync<bool>("eval", "typeof window.mapsInterop === 'undefined' || typeof window.mapsInterop.getUserLocation === 'undefined'");
                 if (!isUndefined)
                 {
-                    Console.WriteLine("[DEBUG] mapsInterop.getUserLocation encontrado após " + (attempts + 1) + " tentativas.");
                     return;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"[DEBUG] Erro ao verificar mapsInterop: {ex.Message}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             }
-            Console.WriteLine($"[DEBUG] Aguardando mapsInterop.getUserLocation... Tentativa {attempts + 1}/{maxAttempts}");
             await Task.Delay(100);
             attempts++;
         }
@@ -256,7 +249,6 @@ else
         }
 
         // Log para depuração
-        Console.WriteLine($"[DEBUG] Tentando adicionar loja: Nome: {selectedSupermarket.Name}, Endereço: {selectedSupermarket.Address}, PlaceId: {newStore.PlaceId}, Lat: {newStore.Localizacao.Latitude}, Lng: {newStore.Localizacao.Longitude}");
 
         // Verifica se a loja já existe com base em vários critérios
         try
@@ -264,7 +256,6 @@ else
             var existingStore = existingStores.FirstOrDefault(s =>
             {
                 // Log para cada loja existente durante a verificação
-                Console.WriteLine($"[DEBUG] Verificando contra loja existente: Nome: {s.Nome}, Endereço: {s.Endereco}, PlaceId: {s.PlaceId}, Lat: {s.Localizacao?.Latitude}, Lng: {s.Localizacao?.Longitude}");
 
                 return
                     // Verifica pelo placeId (se disponível)
@@ -281,19 +272,14 @@ else
             if (existingStore != null)
             {
                 ShowPopup($"Esta loja já existe no sistema. Loja ID: {existingStore.LojaId}", MessagePopup.MessageType.Error);
-                Console.WriteLine($"[DEBUG] Loja duplicada detectada: ID: {existingStore.LojaId}, Nome: {existingStore.Nome}, Endereço: {existingStore.Endereco}, PlaceId: {existingStore.PlaceId}");
                 await InvokeAsync(StateHasChanged);
                 return;
             }
-            else
-            {
-                Console.WriteLine("[DEBUG] Nenhuma duplicata encontrada. Prosseguindo com a criação da loja.");
             }
-        }
         catch (Exception ex)
         {
             ShowPopup($"Erro ao verificar lojas existentes: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Erro na verificação de duplicatas: {ex.Message}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             await InvokeAsync(StateHasChanged);
             return;
         }
@@ -311,7 +297,6 @@ else
         {
             var debug = await saveResponse.Content.ReadAsStringAsync();
             ShowPopup($"Erro ao criar loja: {debug}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Erro ao salvar loja: {debug}");
         }
         await InvokeAsync(StateHasChanged);
     }

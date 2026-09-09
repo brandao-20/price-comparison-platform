@@ -23,11 +23,11 @@ namespace WebAPI.ExportStrategies
 
                 sb.AppendLine(
                     string.Join(",",
-                        item.NomeProduto,
-                        item.NomeLoja,
+                        CsvField.Escape(item.NomeProduto),
+                        CsvField.Escape(item.NomeLoja),
                         preco,
                         dataStr,
-                        item.NomeCategoria
+                        CsvField.Escape(item.NomeCategoria)
                     )
                 );
             }

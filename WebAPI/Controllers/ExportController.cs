@@ -1,3 +1,4 @@
+using WebAPI.ExportStrategies;
 using iText.Kernel.Pdf;
 using iText.Layout;
 using iText.Layout.Element;
@@ -42,7 +43,7 @@ namespace WebAPI.Controllers
             {
                 var cidade = loja.Localizacao?.Cidade ?? "";
                 var pais = loja.Localizacao?.Pais ?? "";
-                sb.AppendLine($"{loja.Nome};{loja.Endereco};{cidade};{pais}");
+                sb.AppendLine(string.Join(";", new[] { loja.Nome, loja.Endereco, cidade, pais }.Select(value => CsvField.Escape(value, ';'))));
             }
 
             var csvBytes = Encoding.UTF8.GetBytes(sb.ToString());
@@ -125,7 +126,7 @@ namespace WebAPI.Controllers
 
             foreach (var p in produtos)
             {
-                sb.AppendLine($"{p.ProdutoId};{p.Nome};{p.Marca};{p.Descricao};{p.Categoria?.Nome ?? "N/A"}");
+                sb.AppendLine(string.Join(";", new[] { p.ProdutoId.ToString(), p.Nome, p.Marca, p.Descricao, p.Categoria?.Nome ?? "N/A" }.Select(value => CsvField.Escape(value, ';'))));
             }
 
             var csvBytes = Encoding.UTF8.GetBytes(sb.ToString());
@@ -217,7 +218,7 @@ namespace WebAPI.Controllers
             sb.AppendLine("Loja;Último Preço;Data do Registro");
             foreach (var loja in lojasInfo)
             {
-                sb.AppendLine($"{loja.LojaNome};{loja.LatestPrice.ToString("C")};{loja.LatestDate.ToString("g")}");
+                sb.AppendLine(string.Join(";", new[] { loja.LojaNome, loja.LatestPrice.ToString("C"), loja.LatestDate.ToString("g") }.Select(value => CsvField.Escape(value, ';'))));
             }
 
             var csvBytes = Encoding.UTF8.GetBytes(sb.ToString());

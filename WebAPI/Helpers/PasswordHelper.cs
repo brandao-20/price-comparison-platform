@@ -17,16 +17,23 @@ namespace WebAPI.Helpers
             return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
         }
     
-        public static bool VerifyPassword(string password, string hashString)
+        public static bool VerifyPassword(string? password, string? hashString)
         {
+            if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(hashString)) return false;
             var parts = hashString.Split(':');
             if (parts.Length != 2) return false;
-    
-            byte[] salt = Convert.FromBase64String(parts[0]);
-            byte[] expectedHash = Convert.FromBase64String(parts[1]);
-    
-            byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithm, KeySize);
-            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            try
+            {
+                byte[] salt = Convert.FromBase64String(parts[0]);
+                byte[] expectedHash = Convert.FromBase64String(parts[1]);
+                if (salt.Length != SaltSize || expectedHash.Length != KeySize) return false;
+                byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithm, KeySize);
+                return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
         }
     }
 }

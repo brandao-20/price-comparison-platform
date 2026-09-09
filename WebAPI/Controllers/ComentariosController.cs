@@ -25,7 +25,6 @@ namespace WebAPI.Controllers
         [HttpGet("registo/{registoId}")]
         public async Task<IActionResult> GetByRegistoId(int registoId)
         {
-            _logger.LogInformation($"[DEBUG] Buscando comentários para RegistoPrecoId: {registoId}");
             try
             {
                 var comentarios = await _context.Comentarios
@@ -46,7 +45,6 @@ namespace WebAPI.Controllers
                     })
                     .ToListAsync();
 
-                _logger.LogInformation($"[DEBUG] Comentários encontrados: {comentarios.Count}");
                 return Ok(new { Success = true, Data = comentarios });
             }
             catch (Exception ex)
@@ -60,29 +58,24 @@ namespace WebAPI.Controllers
         [Authorize]
         public async Task<IActionResult> Create([FromBody] Comentario comentario)
         {
-            _logger.LogInformation($"[DEBUG] Recebendo requisição para criar comentário: RegistoPrecoId={comentario.RegistoPrecoId}, Conteudo={comentario.Conteudo}");
             try
             {
                 if (string.IsNullOrWhiteSpace(comentario.Conteudo))
                 {
-                    _logger.LogWarning("[DEBUG] Conteúdo do comentário está vazio.");
                     return BadRequest(new { Success = false, Message = "O conteúdo do comentário é obrigatório." });
                 }
 
                 var userIdClaim = User.FindFirst("utilizadorId")?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
-                    _logger.LogWarning("[DEBUG] Usuário não identificado ao criar comentário.");
                     return Unauthorized(new { Success = false, Message = "Usuário não identificado." });
                 }
                 comentario.UtilizadorId = userId;
                 comentario.DataCriacao = DateTime.UtcNow;
-                _logger.LogInformation($"[DEBUG] Comentário associado ao usuário: UtilizadorId={userId}, DataCriacao={comentario.DataCriacao}");
 
                 var registoExists = await _context.RegistosPrecos.AnyAsync(r => r.RegistoPrecoId == comentario.RegistoPrecoId);
                 if (!registoExists)
                 {
-                    _logger.LogWarning($"[DEBUG] Registo de preço com ID {comentario.RegistoPrecoId} não encontrado.");
                     return BadRequest(new { Success = false, Message = "Registo de preço não encontrado." });
                 }
 
@@ -90,9 +83,7 @@ namespace WebAPI.Controllers
                 comentario.Utilizador = null; // Garantir que não tentamos salvar o objeto Utilizador
                 _context.Comentarios.Add(comentario);
                 await _context.SaveChangesAsync();
-                _logger.LogInformation($"[DEBUG] Comentário salvo no banco: ComentarioId={comentario.ComentarioId}");
 
-                _logger.LogInformation($"[DEBUG] Comentário criado com sucesso: ComentarioId={comentario.ComentarioId}");
                 return CreatedAtAction(nameof(GetByRegistoId), new { registoId = comentario.RegistoPrecoId },
                     new { Success = true, Message = "Comentário adicionado com sucesso.", Data = comentario });
             }

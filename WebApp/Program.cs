@@ -11,11 +11,14 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Carrega o appsettings.json do wwwroot
-builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
-
-// Regista o IConfiguration como singleton
-builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+// WebAssemblyHostBuilder loads wwwroot/appsettings.json through HTTP.
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5000/";
+if (!Uri.TryCreate(apiBaseUrl, UriKind.Absolute, out var apiUri)
+    || !string.IsNullOrEmpty(apiUri.UserInfo) || !string.IsNullOrEmpty(apiUri.Query)
+    || !string.IsNullOrEmpty(apiUri.Fragment)
+    || (apiUri.Scheme != Uri.UriSchemeHttps && !(builder.HostEnvironment.IsDevelopment() && apiUri.IsLoopback && apiUri.Scheme == Uri.UriSchemeHttp)))
+    throw new InvalidOperationException("ApiBaseUrl must be an HTTPS URL. HTTP loopback is allowed in Development.");
+apiUri = new Uri(apiUri.AbsoluteUri.TrimEnd('/') + "/");
 
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<AuthService>();
@@ -27,7 +30,7 @@ builder.Services.AddScoped(sp =>
     var handler = sp.GetRequiredService<AuthMessageHandler>();
     return new HttpClient(handler)
     {
-        BaseAddress = new Uri("http://localhost:5000/")
+        BaseAddress = apiUri
     };
 });
 
@@ -35,7 +38,7 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddSingleton(sp =>
 {
     var hubConnection = new HubConnectionBuilder()
-        .WithUrl("http://localhost:5000/chathub", options =>
+        .WithUrl(new Uri(apiUri, "chathub"), options =>
         {
             options.AccessTokenProvider = async () =>
             {
@@ -43,7 +46,6 @@ builder.Services.AddSingleton(sp =>
                 {
                     var localStorage = scope.ServiceProvider.GetRequiredService<ILocalStorageService>();
                     var token = await localStorage.GetItemAsync<string>("authToken");
-                    Console.WriteLine($"[DEBUG] Token enviado para SignalR: {token}");
                     return token;
                 }
             };
@@ -58,7 +60,6 @@ builder.Services.AddSingleton(sp =>
         {
             var jsRuntime = scope.ServiceProvider.GetRequiredService<IJSRuntime>();
             await jsRuntime.InvokeVoidAsync("alert", $"Preço do produto {produtoId} mudou para {preco:C}!");
-            Console.WriteLine($"[DEBUG] Preço do produto {produtoId} mudou para {preco:C}");
         }
     });
 

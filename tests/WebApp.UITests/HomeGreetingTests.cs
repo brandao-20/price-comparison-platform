@@ -12,7 +12,7 @@ namespace WebApp.UITests
         private const string Password = "Tests123!";
 
         [SetUp]
-        public new void SetUp()
+        public void RegisterAndLogin()
         {
             var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
 

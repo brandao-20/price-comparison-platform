@@ -1,4 +1,4 @@
-@WebAPI_HostAddress = http://localhost:5029
+@WebAPI_HostAddress = http://localhost:5000
 
-GET {{WebAPI_HostAddress}}/weatherforecast/
+GET {{WebAPI_HostAddress}}/api/Produtos?page=1&pageSize=5
 Accept: application/json

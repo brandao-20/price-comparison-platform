@@ -1,49 +1,14 @@
 @page "/homeadmin"
-@using WebApp.Components
 @inject WebApp.Services.AuthService AuthService
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
-@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @inject NavigationManager Navigation
 
 <h1>Bem-vindo, @AuthService.UserName! (Admin)</h1>
 <p>Você tem acesso completo ao sistema. Gira utilizadores, lojas, categorias, produtos, relatórios e mensagens.</p>
 
-<!-- Popup para credenciais padrão -->
-<MessagePopup
-    IsVisible="@showPopup"
-    Message="@popupMessage"
-    Type="@popupType"
-    OnClose="ClosePopup" />
-
 @code {
-    private bool showPopup = false;
-    private string popupMessage = "";
-    private MessagePopup.MessageType popupType = MessagePopup.MessageType.Info;
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (!AuthService.ValidateToken() || !AuthService.IsAdmin)
-        {
             Navigation.NavigateTo("/login");
-            return;
-        }
-
-        // Verifica se o popup já foi exibido
-        var hasSeenAdminCredentials = await LocalStorage.GetItemAsync<bool>("hasSeenAdminCredentials");
-        if (!hasSeenAdminCredentials && AuthService.IsAdmin)
-        {
-            var adminUsername = Configuration["DefaultAdmin:Username"] ?? "admin";
-            var adminPassword = Configuration["DefaultAdmin:Password"] ?? "admin123";
-            popupMessage = $"Utilize estas credenciais para o primeiro login de administrador:\nUsername: {adminUsername}\nPassword: {adminPassword}\nGuarde estas informações em segurança!";
-            popupType = MessagePopup.MessageType.Info;
-            showPopup = true;
-            await LocalStorage.SetItemAsync("hasSeenAdminCredentials", true);
-        }
-    }
-
-    private async Task ClosePopup()
-    {
-        showPopup = false;
-        await InvokeAsync(StateHasChanged);
     }
 }

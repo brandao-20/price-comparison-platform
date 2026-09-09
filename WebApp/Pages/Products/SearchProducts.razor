@@ -229,7 +229,6 @@ else
         try
         {
             // Carregar categorias para o filtro
-            Console.WriteLine("[DEBUG] Carregando categorias para o filtro de pesquisa...");
             var response = await Http.GetAsync("api/Categorias");
             if (response.IsSuccessStatusCode)
             {
@@ -238,11 +237,6 @@ else
                 {
                     categorias = apiResponse.Data ?? new List<Categoria>();
                     categoriasPlanas = CategoriaSubcategorias.Achatadas(categorias);
-                    Console.WriteLine($"[DEBUG] Categorias achatadas: {categoriasPlanas.Count}");
-                    foreach (var cat in categoriasPlanas)
-                    {
-                        Console.WriteLine($"[DEBUG] Categoria: {cat.NomeExibicao}");
-                    }
                 }
                 else
                 {
@@ -261,7 +255,6 @@ else
             // Carregar produtos favoritos se o utilizador estiver autenticado
             if (AuthService.IsLoggedIn)
             {
-                Console.WriteLine($"[DEBUG] Carregando produtos favoritos para o utilizador {AuthService.UserId}...");
                 var favoritoResponse = await Http.GetAsync($"api/Favoritos/user/{AuthService.UserId}");
                 if (favoritoResponse.IsSuccessStatusCode)
                 {
@@ -269,11 +262,6 @@ else
                     if (favoritoApiResponse?.Success == true)
                     {
                         favoriteProductIds = favoritoApiResponse.Data?.Select(f => f.ProdutoId).ToList() ?? new List<int>();
-                        Console.WriteLine($"[DEBUG] Produtos favoritos carregados: {favoriteProductIds.Count}");
-                        foreach (var prodId in favoriteProductIds)
-                        {
-                            Console.WriteLine($"[DEBUG] Produto favorito ID: {prodId}");
-                        }
                     }
                     else
                     {
@@ -308,14 +296,12 @@ else
     private void OnNameInput(ChangeEventArgs e)
     {
         searchCriteria.Name = e.Value?.ToString() ?? "";
-        Console.WriteLine($"[DEBUG] Nome atualizado via oninput: '{searchCriteria.Name}'");
         StateHasChanged();
     }
 
     private void OnStoreInput(ChangeEventArgs e)
     {
         searchCriteria.Store = e.Value?.ToString() ?? "";
-        Console.WriteLine($"[DEBUG] Loja atualizada via oninput: '{searchCriteria.Store}'");
         StateHasChanged();
     }
 
@@ -343,7 +329,6 @@ else
                     if (apiResponse?.Success == true)
                     {
                         products = apiResponse.Data ?? new List<Produto>();
-                        Console.WriteLine($"[DEBUG] Produtos favoritos retornados: {products.Count}");
                     }
                     else
                     {
@@ -371,11 +356,9 @@ else
                     query.Add($"dateFrom={searchCriteria.DateFrom.Value:yyyy-MM-dd}");
 
                 var queryString = string.Join("&", query);
-                Console.WriteLine($"[DEBUG] Enviando requisição para: api/Produtos/search?{queryString}");
 
                 var response = await Http.GetAsync($"api/Produtos/search?{queryString}");
                 var responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG] Resposta bruta da API: {responseContent}");
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -383,21 +366,11 @@ else
                     if (apiResponse?.Success == true)
                     {
                         var fetchedProducts = apiResponse.Data ?? new List<Produto>();
-                        Console.WriteLine($"[DEBUG] Produtos retornados pela API: {fetchedProducts.Count}");
-                        foreach (var prod in fetchedProducts)
-                        {
-                            Console.WriteLine($"[DEBUG] Produto retornado: ID={prod.ProdutoId}, Nome={prod.Nome}");
-                        }
 
                         // Filtrar pelos favoritos se o filtro estiver ativo
                         if (useFavorites && AuthService.IsLoggedIn && favoriteProductIds.Any())
                         {
                             products = fetchedProducts.Where(p => favoriteProductIds.Contains(p.ProdutoId)).ToList();
-                            Console.WriteLine($"[DEBUG] Produtos filtrados por favoritos: {products.Count}");
-                            foreach (var prod in products)
-                            {
-                                Console.WriteLine($"[DEBUG] Produto favorito encontrado: ID={prod.ProdutoId}, Nome={prod.Nome}");
-                            }
                             if (!products.Any())
                             {
                                 ShowPopup("Nenhum produto favorito encontrado com os critérios fornecidos.", MessagePopup.MessageType.Info);
@@ -406,7 +379,6 @@ else
                         else
                         {
                             products = fetchedProducts;
-                            Console.WriteLine($"[DEBUG] Produtos desserializados (sem filtro de favoritos): {products.Count}");
                         }
 
                         if (!products.Any() && !useFavorites)

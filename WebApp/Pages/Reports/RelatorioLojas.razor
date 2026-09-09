@@ -81,42 +81,28 @@ else
     {
         if (!AuthService.ValidateToken())
         {
-            Console.WriteLine("[DEBUG] Token inválido, redirecionando para /login");
             Navigation.NavigateTo("/login");
             return;
         }
 
         try
         {
-            Console.WriteLine("[DEBUG] Fazendo requisição para api/Relatorios/lojas");
             var response = await Http.GetAsync("api/Relatorios/lojas");
-            Console.WriteLine($"[DEBUG] Status da resposta: {response.StatusCode}");
 
             if (response.IsSuccessStatusCode)
             {
-                var json = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG] Dados recebidos: {json}");
                 lojasReport = await response.Content.ReadFromJsonAsync<List<LojaReportDto>>();
 
                 if (lojasReport == null || !lojasReport.Any())
                 {
-                    Console.WriteLine("[DEBUG] Nenhum dado retornado pela API");
                     ShowPopup("Nenhum dado disponível para o relatório de lojas.", MessagePopup.MessageType.Info);
-                }
-                else
-                {
-                    Console.WriteLine($"[DEBUG] Total de lojas retornadas: {lojasReport.Count}");
-                    foreach (var loja in lojasReport)
-                    {
-                        Console.WriteLine($"[DEBUG] Loja: {loja.Nome}, Produtos: {(loja.Produtos != null ? loja.Produtos.Count : 0)}, Categorias: {(loja.CategoriaCounts != null ? loja.CategoriaCounts.Count : 0)}");
-                    }
                 }
             }
             else
             {
                 lojasReport = new List<LojaReportDto>();
                 var errorContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[ERROR] Erro na API: {errorContent}");
+                Console.Error.WriteLine("The store report request failed.");
                 try
                 {
                     var errorObj = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(errorContent);
@@ -124,7 +110,7 @@ else
                 }
                 catch
                 {
-                    ShowPopup($"Erro ao carregar o relatório de lojas: {errorContent}", MessagePopup.MessageType.Error);
+                    ShowPopup("The store report could not be loaded.", MessagePopup.MessageType.Error);
                 }
             }
         }

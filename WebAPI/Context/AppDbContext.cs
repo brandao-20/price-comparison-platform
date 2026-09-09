@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using WebAPI.Entities;
 using WebAPI.Helpers;
+using WebAPI.Configuration;
 
 namespace WebAPI.Context
 {
@@ -28,75 +29,39 @@ namespace WebAPI.Context
         public virtual DbSet<Comentario> Comentarios { get; set; }
         public virtual DbSet<Favorito> Favoritos { get; set; }
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        public void SeedInitialData(BootstrapAdminSettings? admin = null)
         {
-            if (!optionsBuilder.IsConfigured)
+            string[] requiredTypes = { "ADMIN", "USER", "USER_MANAGER" };
+            foreach (var type in requiredTypes)
             {
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code.
-                optionsBuilder.UseNpgsql("Host=localhost;Database=ES2;Username=postgres;Password=batata");
+                if (!TipoUtilizadors.Any(t => t.Tipo == type))
+                    TipoUtilizadors.Add(new TipoUtilizador { Tipo = type });
             }
-        }
+            SaveChanges();
 
-        public void SeedInitialData()
-        {
-            try
+            if (admin?.Enabled != true || Utilizadores.Any(u => u.TipoUtilizador != null && u.TipoUtilizador.Tipo == "ADMIN"))
+                return;
+            if (Utilizadores.Any(u => u.Username.ToLower() == admin.Username.ToLower() || u.Email.ToLower() == admin.Email.ToLower()))
+                throw new InvalidOperationException("Admin bootstrap conflicts with an existing account. No account was promoted or overwritten.");
+
+            var adminType = TipoUtilizadors.First(t => t.Tipo == "ADMIN");
+            Utilizadores.Add(new Utilizador
             {
-                // Verifica e cria os TipoUtilizador se não existirem
-                string[] requiredTypes = { "ADMIN", "USER", "USER_MANAGER" };
-                foreach (var type in requiredTypes)
-                {
-                    if (!TipoUtilizadors.Any(t => t.Tipo == type))
-                    {
-                        TipoUtilizadors.Add(new TipoUtilizador { Tipo = type });
-                    }
-                }
-
-                // Garante que os TipoUtilizador sejam salvos antes de criar o utilizador Admin
-                if (requiredTypes.Any(type => !TipoUtilizadors.Any(t => t.Tipo == type)))
-                {
-                    SaveChanges();
-                    Console.WriteLine("[DEBUG] Tipos de Utilizador criados ou encontrados com sucesso.");
-                }
-
-                // Verifica se já existe um utilizador Admin
-                if (!Utilizadores.Any(u => u.TipoUtilizador.Tipo == "ADMIN"))
-                {
-                    var adminType = TipoUtilizadors.First(t => t.Tipo == "ADMIN");
-                    var adminPasswordHash = PasswordHelper.HashPassword("admin123");
-                    Utilizadores.Add(new Utilizador
-                    {
-                        UtilizadorId = Utilizadores.Any() ? Utilizadores.Max(u => u.UtilizadorId) + 1 : 1,
-                        Username = "admin",
-                        Email = "admin@example.com",
-                        Password = adminPasswordHash,
-                        TipoUtilizadorId = adminType.TipoUtilizadorId,
-                        DataCriacao = DateTime.UtcNow
-                    });
-                    SaveChanges();
-                    Console.WriteLine("[DEBUG] Utilizador Admin criado com sucesso: admin/admin123");
-                }
-                else
-                {
-                    Console.WriteLine("[DEBUG] Já existe um utilizador Admin. Nenhum novo Admin foi criado.");
-                }
-
-                // Verifica se há mais TipoUtilizador do que o esperado
-                var existingTypes = TipoUtilizadors.ToList();
-                if (existingTypes.Count > requiredTypes.Length)
-                {
-                    Console.WriteLine($"[WARNING] Existem {existingTypes.Count} tipos de utilizador, mas apenas {requiredTypes.Length} são esperados: {string.Join(", ", requiredTypes)}.");
-                    Console.WriteLine($"[WARNING] Tipos atuais: {string.Join(", ", existingTypes.Select(t => $"{t.Tipo} (ID: {t.TipoUtilizadorId})"))}.");
-                    Console.WriteLine("[WARNING] Considere limpar os tipos duplicados manualmente no PostgreSQL.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ERROR] Erro ao realizar o seeding inicial: {ex.Message}");
-            }
+                Username = admin.Username,
+                Email = admin.Email,
+                Password = PasswordHelper.HashPassword(admin.Password),
+                TipoUtilizadorId = adminType.TipoUtilizadorId,
+                DataCriacao = DateTime.UtcNow
+            });
+            SaveChanges();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Existing timestamp columns store UTC clock values without a PostgreSQL time-zone annotation.
+            var utcTimestamp = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+                value => DateTime.SpecifyKind(value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value, DateTimeKind.Unspecified),
+                value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
             modelBuilder.Entity<Categoria>(entity =>
             {
                 entity.HasKey(e => e.CategoriaId).HasName("Categorias_pkey");
@@ -149,7 +114,7 @@ namespace WebAPI.Context
                 entity.HasKey(e => e.RegistoPrecoId).HasName("RegistosPrecos_pkey");
                 entity.ToTable("RegistosPrecos");
                 entity.Property(e => e.Credibilidade).HasPrecision(5, 2);
-                entity.Property(e => e.DataRegisto).HasColumnType("timestamp without time zone");
+                entity.Property(e => e.DataRegisto).HasColumnType("timestamp without time zone").HasConversion(utcTimestamp);
                 entity.Property(e => e.Preco).HasPrecision(10, 2);
                 entity.HasOne(d => d.Loja).WithMany(p => p.RegistosPrecos)
                     .HasForeignKey(d => d.LojaId)
@@ -223,7 +188,7 @@ namespace WebAPI.Context
                 entity.Property(e => e.NomeProduto).HasMaxLength(255);
                 entity.Property(e => e.NomeLoja).HasMaxLength(255);
                 entity.Property(e => e.Preco).HasPrecision(18, 2);
-                entity.Property(e => e.Data).HasColumnType("timestamp without time zone");
+                entity.Property(e => e.Data).HasColumnType("timestamp without time zone").HasConversion(utcTimestamp);
                 entity.Property(e => e.NomeCategoria).HasMaxLength(255);
                 entity.HasOne(d => d.Produto).WithMany()
                     .HasForeignKey(d => d.ProdutoId)

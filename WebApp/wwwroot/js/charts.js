@@ -1,5 +1,4 @@
 window.renderPriceChart = function (data) {
-    console.log("[DEBUG] Iniciando renderPriceChart com dados:", JSON.stringify(data));
 
     const canvas = document.getElementById('precoChart') || document.getElementById('priceChart');
     if (!canvas) {
@@ -16,7 +15,6 @@ window.renderPriceChart = function (data) {
     // Destruir qualquer gráfico existente para evitar conflitos
     if (window.activeChart) {
         window.activeChart.destroy();
-        console.log("[DEBUG] Gráfico anterior destruído.");
     }
 
     // Formatar as datas como strings no formato DD/MM/YYYY
@@ -106,7 +104,6 @@ window.renderPriceChart = function (data) {
         }
     });
 
-    console.log("[DEBUG] Gráfico renderizado com sucesso.");
 };
 
 function getColor(index, alpha = 1) {

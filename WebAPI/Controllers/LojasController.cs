@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WebAPI.Entities;
 using WebAPI.Repositories;
 
@@ -39,6 +40,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task<ActionResult<Loja>> Create(Loja loja)
         {
             // Verifica se a loja já existe com base em PlaceId, nome/endereço ou coordenadas
@@ -76,6 +78,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task<IActionResult> Update(int id, Loja loja)
         {
             if (id != loja.LojaId) return BadRequest();
@@ -103,6 +106,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task<IActionResult> Delete(int id)
         {
             var loja = await _lojaRepository.GetByIdAsync(id);

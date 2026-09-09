@@ -1,4 +1,4 @@
-﻿# Build artifacts
+# Build artifacts
 bin/
 obj/
 *.exe
@@ -56,8 +56,11 @@ ehthumbs.db
 *.code-workspace
 .vscode/
 
-# User secrets / local configs
+# Local configuration and validation artifacts
 **/appsettings.json
-**/appsettings.Development.json
-**/appsettings.*.local.json
-**/appsettings.*.secrets.json
+**/appsettings.Production.json
+**/appsettings.Staging.json
+.env
+.env.*
+!.env.example
+.tmp-hardening/

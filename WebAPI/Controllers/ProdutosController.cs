@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq.Expressions;
 using WebAPI.Entities;
@@ -44,7 +44,6 @@ namespace WebAPI.Controllers
                 if (page < 1) page = 1;
                 if (pageSize < 1) pageSize = 5;
 
-                _logger.LogInformation($"[DEBUG] Obtendo produtos - Página: {page}, Tamanho da página: {pageSize}");
 
                 var totalItems = await _produtoRepository.CountAsync();
                 var skip = (page - 1) * pageSize;
@@ -65,7 +64,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<IEnumerable<Produto>>
                 {
                     Success = false,
-                    Message = $"Erro ao obter produtos: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -80,7 +79,6 @@ namespace WebAPI.Controllers
             {
                 if (id <= 0)
                 {
-                    _logger.LogWarning($"[DEBUG] ID inválido fornecido: {id}");
                     return BadRequest(new ApiResponse<Produto>
                     {
                         Success = false,
@@ -91,12 +89,10 @@ namespace WebAPI.Controllers
                     });
                 }
 
-                _logger.LogInformation($"[DEBUG] Obtendo produto com ID: {id}");
 
                 var produto = await _produtoRepository.GetByIdWithDetailsAsync(id);
                 if (produto == null)
                 {
-                    _logger.LogWarning($"[DEBUG] Produto com ID {id} não encontrado.");
                     return NotFound(new ApiResponse<Produto>
                     {
                         Success = false,
@@ -121,7 +117,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<Produto>
                 {
                     Success = false,
-                    Message = $"Erro ao obter produto: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -136,7 +132,6 @@ namespace WebAPI.Controllers
             {
                 if (id <= 0)
                 {
-                    _logger.LogWarning($"[DEBUG] ID inválido fornecido: {id}");
                     return BadRequest(new ApiResponse<object>
                     {
                         Success = false,
@@ -147,12 +142,10 @@ namespace WebAPI.Controllers
                     });
                 }
 
-                _logger.LogInformation($"[DEBUG] Calculando credibilidade ajustada para o produto com ID: {id}");
 
                 var produto = await _produtoRepository.GetByIdAsync(id);
                 if (produto == null)
                 {
-                    _logger.LogWarning($"[DEBUG] Produto com ID {id} não encontrado.");
                     return NotFound(new ApiResponse<object>
                     {
                         Success = false,
@@ -166,7 +159,6 @@ namespace WebAPI.Controllers
                 var registos = await _registosPrecoRepository.GetByProdutoIdAsync(id);
                 if (registos == null || !registos.Any())
                 {
-                    _logger.LogInformation($"[DEBUG] Nenhum registo de preço encontrado para o produto com ID: {id}");
                     return Ok(new ApiResponse<object>
                     {
                         Success = true,
@@ -190,7 +182,6 @@ namespace WebAPI.Controllers
                 }
 
                 var credibilidadeMedia = count > 0 ? totalCredibilidade / count : 0;
-                _logger.LogInformation($"[DEBUG] Credibilidade ajustada calculada para o produto {id}: {credibilidadeMedia}");
                 return Ok(new ApiResponse<object>
                 {
                     Success = true,
@@ -205,7 +196,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao calcular credibilidade: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -219,11 +210,9 @@ namespace WebAPI.Controllers
         {
             try
             {
-                _logger.LogInformation($"[DEBUG] Criando novo produto: Nome={produto.Nome}, Marca={produto.Marca}, CategoriaId={produto.CategoriaId}");
 
                 if (string.IsNullOrEmpty(produto.Nome) || string.IsNullOrWhiteSpace(produto.Marca))
                 {
-                    _logger.LogWarning($"[DEBUG] Nome ou Marca vazios ao criar produto.");
                     return BadRequest(new ApiResponse<Produto>
                     {
                         Success = false,
@@ -237,7 +226,6 @@ namespace WebAPI.Controllers
                 bool categoryExists = await _categoriaRepository.ExistsAsync(produto.CategoriaId);
                 if (!categoryExists)
                 {
-                    _logger.LogWarning($"[DEBUG] Categoria com ID {produto.CategoriaId} não existe.");
                     return BadRequest(new ApiResponse<Produto>
                     {
                         Success = false,
@@ -248,8 +236,10 @@ namespace WebAPI.Controllers
                     });
                 }
 
+                // Product writes must not persist client-supplied account or category graphs.
+                produto.Categoria = null;
+                produto.Favoritos = new();
                 await _produtoRepository.AddAsync(produto);
-                _logger.LogInformation($"[DEBUG] Produto criado com sucesso: ID={produto.ProdutoId}");
                 return CreatedAtAction(
                     nameof(GetById),
                     new { id = produto.ProdutoId },
@@ -268,7 +258,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<Produto>
                 {
                     Success = false,
-                    Message = $"Erro ao criar produto: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -284,7 +274,6 @@ namespace WebAPI.Controllers
             {
                 if (id <= 0)
                 {
-                    _logger.LogWarning($"[DEBUG] ID inválido fornecido: {id}");
                     return BadRequest(new ApiResponse<object>
                     {
                         Success = false,
@@ -295,11 +284,9 @@ namespace WebAPI.Controllers
                     });
                 }
 
-                _logger.LogInformation($"[DEBUG] Atualizando produto com ID: {id}, Nome={produto.Nome}, Marca={produto.Marca}, CategoriaId={produto.CategoriaId}");
 
                 if (id != produto.ProdutoId)
                 {
-                    _logger.LogWarning($"[DEBUG] ID do produto ({produto.ProdutoId}) não coincide com o ID da URL ({id}).");
                     return BadRequest(new ApiResponse<object>
                     {
                         Success = false,
@@ -313,7 +300,6 @@ namespace WebAPI.Controllers
                 bool categoryExists = await _categoriaRepository.ExistsAsync(produto.CategoriaId);
                 if (!categoryExists)
                 {
-                    _logger.LogWarning($"[DEBUG] Categoria com ID {produto.CategoriaId} não existe.");
                     return BadRequest(new ApiResponse<object>
                     {
                         Success = false,
@@ -324,8 +310,9 @@ namespace WebAPI.Controllers
                     });
                 }
 
+                produto.Categoria = null;
+                produto.Favoritos = new();
                 await _produtoRepository.UpdateAsync(produto);
-                _logger.LogInformation($"[DEBUG] Produto com ID {id} atualizado com sucesso.");
                 return Ok(new ApiResponse<object>
                 {
                     Success = true,
@@ -336,7 +323,6 @@ namespace WebAPI.Controllers
             }
             catch (KeyNotFoundException)
             {
-                _logger.LogWarning($"[DEBUG] Produto com ID {id} não encontrado para atualização.");
                 return NotFound(new ApiResponse<object>
                 {
                     Success = false,
@@ -352,7 +338,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao atualizar produto: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -368,7 +354,6 @@ namespace WebAPI.Controllers
             {
                 if (id <= 0)
                 {
-                    _logger.LogWarning($"[DEBUG] ID inválido fornecido: {id}");
                     return BadRequest(new ApiResponse<object>
                     {
                         Success = false,
@@ -379,12 +364,10 @@ namespace WebAPI.Controllers
                     });
                 }
 
-                _logger.LogInformation($"[DEBUG] Deletando produto com ID: {id}");
 
                 var produto = await _produtoRepository.GetByIdAsync(id);
                 if (produto == null)
                 {
-                    _logger.LogWarning($"[DEBUG] Produto com ID {id} não encontrado para deleção.");
                     return NotFound(new ApiResponse<object>
                     {
                         Success = false,
@@ -396,7 +379,6 @@ namespace WebAPI.Controllers
                 }
 
                 await _produtoRepository.DeleteAsync(produto);
-                _logger.LogInformation($"[DEBUG] Produto com ID {id} deletado com sucesso.");
                 return Ok(new ApiResponse<object>
                 {
                     Success = true,
@@ -411,7 +393,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao deletar produto: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -428,7 +410,6 @@ namespace WebAPI.Controllers
         {
             try
             {
-                _logger.LogInformation($"[DEBUG] Pesquisa de produtos - Nome: '{nome}', CategoriaId: {categoriaId}, Store: '{store}', DateFrom: {dateFrom}");
 
                 Expression<Func<Produto, bool>> predicate = p => true;
 
@@ -459,7 +440,6 @@ namespace WebAPI.Controllers
                 }
 
                 var produtos = await _produtoRepository.FindWithDetailsAsync(predicate);
-                _logger.LogInformation($"[DEBUG] Pesquisa retornou {produtos.Count()} produtos.");
                 return Ok(new ApiResponse<IEnumerable<Produto>>
                 {
                     Success = true,
@@ -474,7 +454,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<IEnumerable<Produto>>
                 {
                     Success = false,
-                    Message = $"Erro ao pesquisar produtos: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null
@@ -486,9 +466,9 @@ namespace WebAPI.Controllers
         [Authorize]
         public async Task<ActionResult<ApiResponse<IEnumerable<Produto>>>> GetFavorites(int userId)
         {
+            if (User.FindFirst("utilizadorId")?.Value != userId.ToString()) return Forbid();
             try
             {
-                _logger.LogInformation($"[DEBUG] Buscando produtos favoritos para o usuário {userId}");
 
                 // Buscar os IDs dos produtos favoritos do usuário
                 var favoriteProductIds = await _context.Favoritos
@@ -498,7 +478,6 @@ namespace WebAPI.Controllers
 
                 if (!favoriteProductIds.Any())
                 {
-                    _logger.LogInformation($"[DEBUG] Nenhum produto favorito encontrado para o usuário {userId}");
                     return Ok(new ApiResponse<IEnumerable<Produto>>
                     {
                         Success = true,
@@ -511,7 +490,6 @@ namespace WebAPI.Controllers
                 // Buscar os produtos correspondentes aos IDs favoritos
                 var produtos = await _produtoRepository.FindWithDetailsAsync(p => favoriteProductIds.Contains(p.ProdutoId));
 
-                _logger.LogInformation($"[DEBUG] Produtos favoritos encontrados para o usuário {userId}: {produtos.Count()} produtos");
                 return Ok(new ApiResponse<IEnumerable<Produto>>
                 {
                     Success = true,
@@ -526,7 +504,7 @@ namespace WebAPI.Controllers
                 return StatusCode(500, new ApiResponse<IEnumerable<Produto>>
                 {
                     Success = false,
-                    Message = $"Erro ao buscar produtos favoritos: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     ErrorCode = "INTERNAL_SERVER_ERROR",
                     StatusCode = 500,
                     Data = null

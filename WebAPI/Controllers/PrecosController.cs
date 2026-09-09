@@ -20,7 +20,6 @@ namespace WebAPI.Controllers
         [HttpGet("produtos")]
         public async Task<ActionResult<List<Produto>>> GetProdutos()
         {
-            Console.WriteLine("[DEBUG] Acessando endpoint /api/precos/produtos");
             var produtos = await _context.Produtos
                 .Select(p => new Produto
                 {
@@ -31,21 +30,18 @@ namespace WebAPI.Controllers
                 .OrderBy(p => p.Nome)
                 .ToListAsync();
 
-            Console.WriteLine($"[DEBUG] Produtos encontrados: {produtos.Count}");
             return Ok(produtos);
         }
 
         [HttpGet("comparar/{produtoId}")]
         public async Task<ActionResult<PrecoComparacaoDTO>> CompararPrecos(int produtoId, [FromQuery] int? lojaId1 = null, [FromQuery] int? lojaId2 = null)
         {
-            Console.WriteLine($"[DEBUG] Acessando endpoint /api/precos/comparar/{produtoId} com lojaId1={lojaId1}, lojaId2={lojaId2}");
 
             var produto = await _context.Produtos
                 .FirstOrDefaultAsync(p => p.ProdutoId == produtoId);
 
             if (produto == null)
             {
-                Console.WriteLine($"[DEBUG] Produto com ID {produtoId} não encontrado.");
                 return NotFound("Produto não encontrado.");
             }
 
@@ -63,7 +59,6 @@ namespace WebAPI.Controllers
                 })
                 .ToListAsync();
 
-            Console.WriteLine($"[DEBUG] Lojas disponíveis para o produto {produtoId}: {lojasDisponiveis.Count}");
 
             var query = _context.RegistosPrecos
                 .Where(r => r.ProdutoId == produtoId);
@@ -71,7 +66,6 @@ namespace WebAPI.Controllers
             if (lojaId1.HasValue && lojaId2.HasValue)
             {
                 query = query.Where(r => r.LojaId == lojaId1.Value || r.LojaId == lojaId2.Value);
-                Console.WriteLine($"[DEBUG] Filtrando preços para lojas {lojaId1.Value} e {lojaId2.Value}");
             }
 
             query = query.Include(r => r.Loja); // Carregar Loja depois de todos os filtros
@@ -89,7 +83,6 @@ namespace WebAPI.Controllers
                 })
                 .ToList();
 
-            Console.WriteLine($"[DEBUG] Preços atuais encontrados: {precosAtuais.Count}");
 
             var historicoPrecos = registos
                 .Select(r => new HistoricoPrecoDTO
@@ -101,7 +94,6 @@ namespace WebAPI.Controllers
                 .OrderBy(r => r.DataRegisto)
                 .ToList();
 
-            Console.WriteLine($"[DEBUG] Histórico de preços encontrados: {historicoPrecos.Count}");
 
             var resultado = new PrecoComparacaoDTO
             {

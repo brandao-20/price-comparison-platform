@@ -24,7 +24,14 @@
                     @foreach (var msg in _messages)
                     {
                         <div class="message @(msg.sender == "person" ? "person" : "ai") @(msg.sender != "person" ? (msg.type == TIPO.ERRO ? "bg-danger" : msg.type == TIPO.AVISO ? "bg-warning" : "") : "")">
-                            <span>@((MarkupString)msg.message)</span>
+                            @if (msg.sender == "person")
+                            {
+                                <span>@msg.message</span>
+                            }
+                            else
+                            {
+                                <span>@((MarkupString)msg.message)</span>
+                            }
                         </div>
                     }
                 </div>
@@ -62,15 +69,6 @@
         {
             await ScrollToBottom();
         }
-    }
-
-    protected override void OnInitialized()
-    {
-        // Log de depuração para verificar quando o chatbot é renderizado
-        var currentPath = Navigation.Uri;
-        var baseUri = Navigation.BaseUri;
-        var relativePath = currentPath.Replace(baseUri, "").TrimEnd('/').ToLower();
-        Console.WriteLine($"[DEBUG] Chatbot - Relative Path: {relativePath}, IsLoggedIn: {AuthService.IsLoggedIn}, Role: {AuthService.Role}");
     }
 
     private async Task ToggleChat()

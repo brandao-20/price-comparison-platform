@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
+using WebAPI.Configuration;
 using WebAPI.Entities;
 using WebAPI.Repositories;
 using WebAPI.Services;
@@ -15,49 +15,69 @@ namespace WebAPI.Controllers
     [Route("api/[controller]")]
     public class ExternalLoginController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
+        private readonly JwtSettings _jwtSettings;
+        private readonly Uri _frontendUrl;
+        private readonly GoogleLoginCodeStore _codes;
+        private readonly IAuthenticationSchemeProvider _schemes;
         private readonly IUtilizadorRepository _utilizadorRepository;
         private readonly ITipoUtilizadorRepository _tipoUtilizadorRepository;
         private readonly IRoleService _roleService;
 
         public ExternalLoginController(
-            IConfiguration configuration,
+            JwtSettings jwtSettings,
+            Uri frontendUrl,
+            GoogleLoginCodeStore codes,
+            IAuthenticationSchemeProvider schemes,
             IUtilizadorRepository utilizadorRepository,
             ITipoUtilizadorRepository tipoUtilizadorRepository,
             IRoleService roleService)
         {
-            _configuration = configuration;
+            _jwtSettings = jwtSettings;
+            _frontendUrl = frontendUrl;
+            _codes = codes;
+            _schemes = schemes;
             _utilizadorRepository = utilizadorRepository;
             _tipoUtilizadorRepository = tipoUtilizadorRepository;
             _roleService = roleService;
         }
 
         [HttpGet("Google")]
-        public IActionResult GoogleLogin()
+        public async Task<IActionResult> GoogleLogin([FromQuery] string challenge)
         {
+            if (await _schemes.GetSchemeAsync(GoogleDefaults.AuthenticationScheme) == null)
+                return Redirect(new Uri(_frontendUrl, "login?error=GoogleNotConfigured").AbsoluteUri);
+            if (!GoogleLoginCodeStore.IsValidChallenge(challenge))
+                return BadRequest(new { Message = "A valid login challenge is required." });
             var authProperties = new AuthenticationProperties
             {
                 RedirectUri = Url.Action("GoogleCallback")
             };
 
+            authProperties.Items["code_challenge"] = challenge;
             return Challenge(authProperties, GoogleDefaults.AuthenticationScheme);
         }
 
         [HttpGet("GoogleCallback")]
         public async Task<IActionResult> GoogleCallback()
         {
-            var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
-            if (!result.Succeeded)
+            var result = await HttpContext.AuthenticateAsync("ExternalCookies");
+            await HttpContext.SignOutAsync("ExternalCookies");
+            Response.Headers.CacheControl = "no-store";
+            Response.Headers["Referrer-Policy"] = "no-referrer";
+            if (!result.Succeeded || result.Principal == null)
             {
-                Console.WriteLine("[ERROR] Falha na autenticação com Google.");
-                return Redirect("http://localhost:5116/login?error=GoogleLoginFailed");
+                return Redirect(new Uri(_frontendUrl, "login?error=GoogleLoginFailed").AbsoluteUri);
             }
+
+            string? challenge = null;
+            result.Properties?.Items.TryGetValue("code_challenge", out challenge);
+            if (!GoogleLoginCodeStore.IsValidChallenge(challenge))
+                return Redirect(new Uri(_frontendUrl, "login?error=GoogleLoginFailed").AbsoluteUri);
 
             var googleId = result.Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrWhiteSpace(googleId))
             {
-                Console.WriteLine("[ERROR] Google ID não encontrado na resposta da autenticação.");
-                return Redirect("http://localhost:5116/login?error=GoogleIdMissing");
+                return Redirect(new Uri(_frontendUrl, "login?error=GoogleIdMissing").AbsoluteUri);
             }
 
             var givenName = result.Principal.FindFirst("given_name")?.Value;
@@ -72,9 +92,8 @@ namespace WebAPI.Controllers
             var user = (await _utilizadorRepository.FindAsync(u => u.GoogleId == googleId)).FirstOrDefault();
             if (user == null)
             {
-                // Novos utilizadores via Google devem ser USER por padrão
-                var tipo = await _tipoUtilizadorRepository.FindAsync(t => t.Tipo == "USER")
-                    .ContinueWith(t => t.Result.FirstOrDefault());
+                // External registration always creates a regular user.
+                var tipo = (await _tipoUtilizadorRepository.FindAsync(t => t.Tipo == "USER")).FirstOrDefault();
                 if (tipo == null)
                 {
                     tipo = new TipoUtilizador { Tipo = "USER" };
@@ -99,7 +118,7 @@ namespace WebAPI.Controllers
                 await _utilizadorRepository.UpdateAsync(user);
             }
 
-            // Carregar o TipoUtilizador do utilizador existente
+            // Load the existing account role before issuing its token.
             if (user.TipoUtilizador == null)
             {
                 var tipo = user.TipoUtilizadorId.HasValue
@@ -109,22 +128,32 @@ namespace WebAPI.Controllers
             }
 
             var token = GenerateJwtForGoogleUser(user);
-            Console.WriteLine($"[DEBUG] Token gerado para utilizador {user.Username}: {token}");
-            return Redirect($"http://localhost:5116/?googleToken={token}");
+            var code = _codes.Issue(token, challenge!);
+            return Redirect(new Uri(_frontendUrl, $"login?code={Uri.EscapeDataString(code)}").AbsoluteUri);
+        }
+
+        [HttpPost("exchange")]
+        public IActionResult Exchange([FromBody] GoogleCodeRequest request)
+        {
+            Response.Headers.CacheControl = "no-store";
+            var token = _codes.Redeem(request.Code, request.Verifier);
+            if (token == null)
+                return Unauthorized(new { Message = "The login code is invalid or expired. Start Google login again." });
+            return Ok(new { Token = token });
+        }
+
+        public sealed class GoogleCodeRequest
+        {
+            public string Code { get; set; } = "";
+            public string Verifier { get; set; } = "";
         }
 
         private string GenerateJwtForGoogleUser(Utilizador user)
         {
-            var jwtSettings = _configuration.GetSection("Jwt");
-            string jwtKey = jwtSettings["Key"] ?? throw new Exception("JWT Key não configurada.");
-            string issuer = jwtSettings["Issuer"] ?? "http://localhost:5000";
-            string audience = jwtSettings["Audience"] ?? "http://localhost:5000";
-
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var signingKey = _jwtSettings.SigningKey;
             var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
             var role = _roleService.NormalizeRole(user.TipoUtilizador?.Tipo ?? "USER");
-            Console.WriteLine($"[DEBUG] Papel atribuído ao utilizador {user.Username}: {role}");
 
             var claims = new List<Claim>
             {
@@ -134,15 +163,10 @@ namespace WebAPI.Controllers
                 new Claim("utilizadorId", user.UtilizadorId.ToString())
             };
 
-            // Log dos claims adicionados
-            foreach (var claim in claims)
-            {
-                Console.WriteLine($"[DEBUG] Claim adicionado: {claim.Type} = {claim.Value}");
-            }
 
             var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
+                issuer: _jwtSettings.Issuer,
+                audience: _jwtSettings.Audience,
                 claims: claims,
                 expires: DateTime.UtcNow.AddHours(2),
                 signingCredentials: creds

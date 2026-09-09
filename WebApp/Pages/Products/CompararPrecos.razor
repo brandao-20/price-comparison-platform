@@ -117,54 +117,47 @@
     {
         try
         {
-            Console.WriteLine("[DEBUG] Carregando lista de produtos...");
             var response = await Http.GetAsync("api/precos/produtos");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/precos/produtos: Status {response.StatusCode}");
             if (response.IsSuccessStatusCode)
             {
                 produtos = await response.Content.ReadFromJsonAsync<List<Produto>>() ?? new List<Produto>();
-                Console.WriteLine($"[DEBUG] Produtos carregados: {produtos.Count}");
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Erro ao carregar produtos: Status {response.StatusCode}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Exceção ao carregar produtos: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 
     private async Task OnProdutoChangedAsync(ChangeEventArgs e)
     {
         produtoId = int.Parse(e.Value?.ToString() ?? "0");
-        Console.WriteLine($"[DEBUG] Produto selecionado: ID {produtoId}");
 
         if (produtoId > 0)
         {
             try
             {
-                Console.WriteLine($"[DEBUG] Carregando dados para o produto {produtoId}...");
                 var response = await Http.GetAsync($"api/precos/comparar/{produtoId}");
-                Console.WriteLine($"[DEBUG] Resposta do endpoint /api/precos/comparar/{produtoId}: Status {response.StatusCode}");
                 if (response.IsSuccessStatusCode)
                 {
                     var comparacao = await response.Content.ReadFromJsonAsync<PrecoComparacaoDTO>();
                     lojasDisponiveis = comparacao?.LojasDisponiveis ?? new List<LojaDTO>();
                     nomeProduto = comparacao?.NomeProduto;
-                    Console.WriteLine($"[DEBUG] Lojas disponíveis: {lojasDisponiveis.Count}, Nome do produto: {nomeProduto}");
                 }
                 else
                 {
-                    Console.WriteLine($"[DEBUG] Erro ao carregar dados do produto: Status {response.StatusCode}");
+                    Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                     lojasDisponiveis = new List<LojaDTO>();
                     nomeProduto = null;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"[DEBUG] Exceção ao carregar dados do produto {produtoId}: {ex.Message}\n{ex.StackTrace}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                 lojasDisponiveis = new List<LojaDTO>();
                 nomeProduto = null;
             }
@@ -199,7 +192,6 @@
 
     private async Task AtualizarComparacao()
     {
-        Console.WriteLine($"[DEBUG] Lojas selecionadas: LojaId1={lojaId1}, LojaId2={lojaId2}");
 
         if (produtoId <= 0 || lojaId1 <= 0 || lojaId2 <= 0 || lojaId1 == lojaId2)
         {
@@ -213,31 +205,21 @@
         // Carregar preços atuais
         try
         {
-            Console.WriteLine($"[DEBUG] Carregando preços atuais para o produto {produtoId} com lojas {lojaId1} e {lojaId2}...");
             var comparacaoResponse = await Http.GetAsync($"api/precos/comparar/{produtoId}?lojaId1={lojaId1}&lojaId2={lojaId2}");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/precos/comparar/{produtoId}: Status {comparacaoResponse.StatusCode}");
             if (comparacaoResponse.IsSuccessStatusCode)
             {
                 var comparacao = await comparacaoResponse.Content.ReadFromJsonAsync<PrecoComparacaoDTO>();
                 precosAtuais = comparacao?.PrecosAtuais;
-                Console.WriteLine($"[DEBUG] Preços atuais carregados: {precosAtuais?.Count ?? 0}");
-                if (precosAtuais != null)
-                {
-                    foreach (var preco in precosAtuais)
-                    {
-                        Console.WriteLine($"[DEBUG] Preço atual - Loja: {preco.NomeLoja}, Preço: {preco.Preco}, Data: {preco.DataRegisto}");
-                    }
-                }
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Erro ao carregar preços atuais: Status {comparacaoResponse.StatusCode}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                 precosAtuais = null;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Exceção ao carregar preços atuais: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             precosAtuais = null;
         }
 
@@ -247,9 +229,7 @@
 
         try
         {
-            Console.WriteLine($"[DEBUG] Carregando histórico de preços para o produto {produtoId} com lojas {lojaId1} e {lojaId2}...");
             var response = await Http.GetAsync($"api/Relatorios/produtos/{produtoId}/pricehistory?groupByStore=true");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Relatorios/produtos/{produtoId}/pricehistory: Status {response.StatusCode}");
             if (response.IsSuccessStatusCode)
             {
                 var historyApiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<List<PriceHistoryDto>>>();
@@ -259,37 +239,21 @@
                         ?.Where(h => h.LojaNome == lojasDisponiveis.FirstOrDefault(l => l.LojaId == lojaId1)?.Nome ||
                                      h.LojaNome == lojasDisponiveis.FirstOrDefault(l => l.LojaId == lojaId2)?.Nome)
                         .ToList();
-                    Console.WriteLine($"[DEBUG] Histórico de preços carregado: {historicoPrecos?.Count ?? 0} entradas");
-                    if (historicoPrecos != null)
-                    {
-                        foreach (var history in historicoPrecos)
-                        {
-                            Console.WriteLine($"[DEBUG] Histórico - Loja: {history.LojaNome}, Preços: {history.Prices?.Count ?? 0}");
-                            if (history.Prices != null)
-                            {
-                                foreach (var price in history.Prices)
-                                {
-                                    Console.WriteLine($"[DEBUG] Data: {price.Date}, Preço: {price.Price}");
-                                }
-                            }
-                        }
-                    }
                 }
                 else
                 {
-                    Console.WriteLine($"[DEBUG] Falha ao carregar histórico: {historyApiResponse?.Message}");
                     historicoPrecos = null;
                 }
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Erro ao carregar histórico: Status {response.StatusCode}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                 historicoPrecos = null;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Exceção ao carregar histórico de preços: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             historicoPrecos = null;
         }
         finally
@@ -308,21 +272,15 @@
         try
         {
             var canvasExists = await JSRuntime.InvokeAsync<bool>("eval", "!!document.getElementById('precoChart')");
-            Console.WriteLine($"[DEBUG] Canvas 'precoChart' existe: {canvasExists}");
 
             if (canvasExists)
             {
                 await JSRuntime.InvokeVoidAsync("renderPriceChart", historicoPrecos);
-                Console.WriteLine("[DEBUG] Gráfico de comparação renderizado com sucesso.");
-            }
-            else
-            {
-                Console.WriteLine("[DEBUG] Canvas 'precoChart' não encontrado no DOM.");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Erro ao renderizar o gráfico: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 

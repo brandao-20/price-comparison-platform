@@ -152,7 +152,6 @@ else
     {
         try
         {
-            Console.WriteLine("[DEBUG] Carregando registos de preços...");
             var response = await Http.GetAsync("api/RegistosPrecos");
             if (response.IsSuccessStatusCode)
             {
@@ -160,7 +159,6 @@ else
                 if (apiResponse?.Success == true)
                 {
                     precos = apiResponse.Data ?? new List<RegistoPrecoModel>();
-                    Console.WriteLine($"[DEBUG] Registos de preços carregados: {precos.Count}");
                 }
                 else
                 {
@@ -204,7 +202,6 @@ else
 
         try
         {
-            Console.WriteLine($"[DEBUG] Excluindo registo de preço com ID: {registoIdToDelete}");
             var response = await Http.DeleteAsync($"api/RegistosPrecos/{registoIdToDelete}");
             if (response.IsSuccessStatusCode)
             {

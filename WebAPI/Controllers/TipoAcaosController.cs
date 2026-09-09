@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WebAPI.Entities;
 using WebAPI.Repositories;
 
@@ -31,10 +32,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<TipoAcaosController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<IEnumerable<TipoAcao>>
                 {
                     Success = false,
-                    Message = $"Erro ao carregar os tipos de ação: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -79,10 +81,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<TipoAcaosController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<TipoAcao>
                 {
                     Success = false,
-                    Message = $"Erro ao buscar o tipo de ação: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -90,6 +93,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<TipoAcao>>> Create(TipoAcao tipoAcao)
         {
             try
@@ -116,10 +120,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<TipoAcaosController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<TipoAcao>
                 {
                     Success = false,
-                    Message = $"Erro ao criar o tipo de ação: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -127,6 +132,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<object>>> Update(int id, TipoAcao tipoAcao)
         {
             try
@@ -175,10 +181,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<TipoAcaosController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao atualizar o tipo de ação: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -186,6 +193,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<object>>> Delete(int id)
         {
             try
@@ -224,10 +232,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<TipoAcaosController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao excluir o tipo de ação: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });

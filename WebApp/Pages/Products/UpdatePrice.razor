@@ -60,11 +60,9 @@ else
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Renderizando {lojas.Count} lojas...");
                 <select class="form-select" @bind="record.LojaId" disabled>
                     @foreach (var l in lojas)
                     {
-                        Console.WriteLine($"[DEBUG] Loja: {l.LojaId} - {l.Nome}");
                         <option value="@l.LojaId">@l.Nome</option>
                     }
                 </select>
@@ -138,7 +136,6 @@ else
     {
         if (!AuthService.ValidateToken() || !AuthService.IsLoggedIn)
         {
-            Console.WriteLine("[DEBUG] Token inválido ou expirado, redirecionando para login.");
             Navigation.NavigateTo("/login");
             return;
         }
@@ -153,12 +150,9 @@ else
         try
         {
             // Carrega o registo de preço
-            Console.WriteLine($"[DEBUG] Carregando registo de preço com ID: {Id}");
             var regResponse = await Http.GetAsync($"api/RegistosPrecos/{Id}");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/RegistosPrecos/{Id}: Status {regResponse.StatusCode}");
             if (regResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                Console.WriteLine("[DEBUG] Token inválido ou expirado ao carregar registo, redirecionando para login.");
                 Navigation.NavigateTo("/login");
                 return;
             }
@@ -168,7 +162,6 @@ else
                 if (apiResponse?.Success == true)
                 {
                     record = apiResponse.Data;
-                    Console.WriteLine($"[DEBUG] Registo de preço carregado: ID={record?.RegistoPrecoId}");
                 }
                 else
                 {
@@ -183,16 +176,13 @@ else
             }
 
             // Carrega a lista de produtos
-            Console.WriteLine("[DEBUG] Carregando produtos...");
             var prodResponse = await Http.GetAsync("api/Produtos");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Produtos: Status {prodResponse.StatusCode}");
             if (prodResponse.IsSuccessStatusCode)
             {
                 var apiResponse = await prodResponse.Content.ReadFromJsonAsync<ApiResponse<List<Produto>>>();
                 if (apiResponse?.Success == true)
                 {
                     produtos = apiResponse.Data ?? new List<Produto>();
-                    Console.WriteLine($"[DEBUG] Produtos carregados: {produtos.Count}");
                 }
                 else
                 {
@@ -207,17 +197,10 @@ else
             }
 
             // Carrega a lista de lojas
-            Console.WriteLine("[DEBUG] Carregando lojas...");
             var lojaResponse = await Http.GetAsync("api/Lojas");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Lojas: Status {lojaResponse.StatusCode}");
             if (lojaResponse.IsSuccessStatusCode)
             {
                 lojas = await lojaResponse.Content.ReadFromJsonAsync<List<Loja>>() ?? new List<Loja>();
-                Console.WriteLine($"[DEBUG] Lojas carregadas: {lojas.Count}");
-                foreach (var loja in lojas)
-                {
-                    Console.WriteLine($"[DEBUG] Loja carregada: {loja.LojaId} - {loja.Nome}");
-                }
             }
             else
             {
@@ -226,16 +209,13 @@ else
             }
 
             // Carrega a lista de tipos de ação
-            Console.WriteLine("[DEBUG] Carregando tipos de ação...");
             var acaoResponse = await Http.GetAsync("api/TipoAcaos");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/TipoAcaos: Status {acaoResponse.StatusCode}");
             if (acaoResponse.IsSuccessStatusCode)
             {
                 var apiResponse = await acaoResponse.Content.ReadFromJsonAsync<ApiResponse<List<TipoAcao>>>();
                 if (apiResponse?.Success == true)
                 {
                     tipoAcoes = apiResponse.Data ?? new List<TipoAcao>();
-                    Console.WriteLine($"[DEBUG] Tipos de ação carregados: {tipoAcoes.Count}");
                 }
                 else
                 {
@@ -256,13 +236,12 @@ else
             lojas = new List<Loja>();
             tipoAcoes = new List<TipoAcao>();
             ShowPopup($"Erro inesperado ao carregar os dados: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Exceção ao carregar dados: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
         finally
         {
             isInitialized = true;
             await InvokeAsync(StateHasChanged);
-            Console.WriteLine("[DEBUG] StateHasChanged chamado após inicialização.");
         }
     }
 
@@ -300,12 +279,9 @@ else
 
         try
         {
-            Console.WriteLine($"[DEBUG] Atualizando registo de preço: ID={record.RegistoPrecoId}, Preço={record.Preco}");
             var response = await Http.PutAsJsonAsync($"api/RegistosPrecos/{Id}", record);
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/RegistosPrecos/{Id}: Status {response.StatusCode}");
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                Console.WriteLine("[DEBUG] Token inválido ou expirado ao atualizar preço, redirecionando para login.");
                 Navigation.NavigateTo("/login");
                 return;
             }
@@ -318,7 +294,6 @@ else
                     newComment.RegistoPrecoId = Id;
                     newComment.UtilizadorId = AuthService.UserId;
                     var commentResponse = await Http.PostAsJsonAsync("api/Comentarios", newComment);
-                    Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Comentarios: Status {commentResponse.StatusCode}");
                     if (commentResponse.IsSuccessStatusCode)
                     {
                         var commentApiResponse = await commentResponse.Content.ReadFromJsonAsync<ApiResponse<Comentario>>();
@@ -350,7 +325,7 @@ else
         catch (Exception ex)
         {
             ShowPopup($"Erro inesperado ao atualizar o registo de preço: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Exceção ao atualizar o preço: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 

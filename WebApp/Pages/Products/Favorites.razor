@@ -68,24 +68,22 @@ else
                 if (apiResponse?.Success == true)
                 {
                     favoritos = apiResponse.Data ?? new List<FavoritoDto>();
-                    Console.WriteLine($"[DEBUG] Produtos favoritos carregados: {favoritos.Count}");
                 }
                 else
                 {
                     favoritos = new List<FavoritoDto>();
-                    Console.WriteLine("[DEBUG] Nenhuma favorito carregado (resposta não bem-sucedida).");
                 }
             }
             else
             {
                 favoritos = new List<FavoritoDto>();
-                Console.WriteLine($"[DEBUG] Erro ao carregar favoritos: Status {response.StatusCode}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             favoritos = new List<FavoritoDto>();
-            Console.WriteLine($"[DEBUG] Exceção ao carregar favoritos: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
         finally
         {

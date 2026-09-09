@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq.Expressions;
 using System.Security.Claims;
-using System.Text;
+using WebAPI.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using WebAPI.Entities;
@@ -18,16 +18,16 @@ namespace WebAPI.Controllers
     {
         private readonly IUtilizadorRepository _utilizadorRepository;
         private readonly IRoleService _roleService;
-        private readonly IConfiguration _configuration;
+        private readonly JwtSettings _jwtSettings;
 
         public AuthController(
             IUtilizadorRepository utilizadorRepository,
             IRoleService roleService,
-            IConfiguration configuration)
+            JwtSettings jwtSettings)
         {
             _utilizadorRepository = utilizadorRepository;
             _roleService = roleService;
-            _configuration = configuration;
+            _jwtSettings = jwtSettings;
         }
 
         [HttpPost("login")]
@@ -70,6 +70,7 @@ namespace WebAPI.Controllers
             var token = GenerateJwtToken(user);
             var role = _roleService.NormalizeRole(user.TipoUtilizador?.Tipo ?? "USER");
             var response = new LoginResponse { Token = token, Role = role };
+            Response.Headers.CacheControl = "no-store";
             return Ok(new ApiResponse<LoginResponse>
             {
                 Success = true,
@@ -81,12 +82,6 @@ namespace WebAPI.Controllers
 
         private string GenerateJwtToken(Utilizador user)
         {
-            var jwtSettings = _configuration.GetSection("Jwt");
-            string key = jwtSettings["Key"]
-                         ?? "cf7fe7d90327ce76c4f697bfb31f1e1fe11cd98c484af55e9fe5b9e9fe10d35d09ff4ea95c763a91d4fbae68b348c8b2f32b29dd57f349d42b23aa3749cbac8adf59b35f9093a54b28c92d1b17f8a06fd65a7aa6a6331507d4366656823c40d50d43c597bdfd659098e3ddddfe75bcd923f4a47399001d1c5ab17bda70c69defc8e0a463030bb75f7d0610cff50aea4ffbbf64b101a6481cac42b8dca368ee368dadbe7f9ac88db6dc5476aefa8c0d5c67f0a18d0483eb3b056e93eb4dc51384f2d64abbe5fa74432545d0bd31cdc173c2f85fc2019bb154418c5cd59bb1400419d57557ac14a3284a9e40977975545efc2338eb4ba810ac4e0b7b32c7c49688";
-            string issuer = jwtSettings["Issuer"] ?? "http://localhost:5000";
-            string audience = jwtSettings["Audience"] ?? "http://localhost:5000";
-
             var roleNormalized = _roleService.NormalizeRole(user.TipoUtilizador?.Tipo ?? "USER");
             var claims = new[]
             {
@@ -96,14 +91,14 @@ namespace WebAPI.Controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+            var signingKey = _jwtSettings.SigningKey;
             var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
-                issuer,
-                audience,
+                _jwtSettings.Issuer,
+                _jwtSettings.Audience,
                 claims,
-                expires: DateTime.Now.AddHours(2),
+                expires: DateTime.UtcNow.AddHours(2),
                 signingCredentials: creds
             );
 

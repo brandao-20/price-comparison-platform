@@ -4,26 +4,22 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType>
+    <UserSecretsId>price-comparison-platform-webapi</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Pacote principal do iText7 -->
     <PackageReference Include="iText7" Version="8.0.5" />
-
-    <!-- Pacote adaptador para BouncyCastle para iText7 -->
     <PackageReference Include="itext7.bouncy-castle-adapter" Version="8.0.5" />
-
-    <!-- Se necessário, também mantenha o BouncyCastle.NetCore -->
-    <PackageReference Include="BouncyCastle.NetCore" Version="1.8.10" />
-
-    <!-- Outras referências -->
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="7.0.14" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.10" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.3.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Bcl.Memory" Version="9.0.14" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.6.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />

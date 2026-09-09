@@ -1,4 +1,5 @@
 @page "/chat/room/{otherUserId:int}"
+@implements IAsyncDisposable
 @using Microsoft.AspNetCore.SignalR.Client
 @using System.Security.Claims
 @using WebApp.Models
@@ -52,7 +53,7 @@ else
     private bool isLoggedIn;
     private bool isConnected;
     private int userId;
-    private HubConnection hubConnection;
+    private HubConnection? hubConnection;
     private List<Mensagem> messages = new List<Mensagem>();
     private string newMessage = "";
 
@@ -83,11 +84,11 @@ else
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
         // Configurar SignalR
-        var hubUrl = "http://localhost:5000/chathub";
+        var hubUrl = new Uri(Http.BaseAddress!, "chathub");
         hubConnection = new HubConnectionBuilder()
             .WithUrl(hubUrl, options =>
             {
-                options.AccessTokenProvider = () => Task.FromResult(token);
+                options.AccessTokenProvider = async () => await LocalStorage.GetItemAsync<string>("authToken");
             })
             .WithAutomaticReconnect()
             .Build();
@@ -117,12 +118,11 @@ else
         try
         {
             await hubConnection.StartAsync();
-            Console.WriteLine("[DEBUG] Conexão com SignalR estabelecida com sucesso.");
             isConnected = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Erro ao conectar ao SignalR: {ex.Message}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             isConnected = false;
             return;
         }
@@ -138,15 +138,15 @@ else
                 (m.RemetenteId == otherUserId && m.DestinatarioId == userId)
             ).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Erro ao carregar histórico: {ex.Message}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 
     private async Task SendMessage()
     {
-        if (!string.IsNullOrEmpty(newMessage))
+        if (!string.IsNullOrEmpty(newMessage) && hubConnection?.State == HubConnectionState.Connected)
         {
             // Envia ao otherUserId
             await hubConnection.SendAsync("SendMessage", otherUserId, newMessage);
@@ -161,7 +161,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
-        if (hubConnection != null && hubConnection.State == HubConnectionState.Connected)
+        if (hubConnection != null)
         {
             await hubConnection.StopAsync();
             await hubConnection.DisposeAsync();

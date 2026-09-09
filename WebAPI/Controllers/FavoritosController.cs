@@ -23,19 +23,16 @@ namespace WebAPI.Controllers
         [Authorize]
         public async Task<IActionResult> ToggleFavorito([FromBody] Favorito favorito)
         {
-            Console.WriteLine($"[DEBUG] Recebendo requisição para favoritar/desfavoritar: ProdutoId={favorito.ProdutoId}, UtilizadorId={favorito.UtilizadorId}");
             try
             {
                 // Validar campos obrigatórios
                 if (favorito.ProdutoId <= 0)
                 {
-                    Console.WriteLine("[DEBUG] ProdutoId inválido.");
                     return BadRequest(new { Success = false, Message = "ProdutoId deve ser maior que zero." });
                 }
 
                 if (favorito.UtilizadorId <= 0)
                 {
-                    Console.WriteLine("[DEBUG] UtilizadorId inválido.");
                     return BadRequest(new { Success = false, Message = "UtilizadorId deve ser maior que zero." });
                 }
 
@@ -48,11 +45,9 @@ namespace WebAPI.Controllers
 
                 // Garantir que o UtilizadorId vem do token JWT
                 favorito.UtilizadorId = userId;
-                Console.WriteLine($"[DEBUG] Utilizador autenticado: {userId}");
 
                 var exists = await _context.Favoritos
                     .AnyAsync(f => f.UtilizadorId == userId && f.ProdutoId == favorito.ProdutoId);
-                Console.WriteLine($"[DEBUG] Produto já está favoritado: {exists}");
 
                 if (exists)
                 {
@@ -65,7 +60,6 @@ namespace WebAPI.Controllers
                     }
                     _context.Favoritos.Remove(favoritoToRemove);
                     await _context.SaveChangesAsync();
-                    Console.WriteLine("[DEBUG] Produto removido dos favoritos.");
                     return Ok(new { Success = true, Message = "Produto removido dos favoritos." });
                 }
                 else
@@ -73,7 +67,6 @@ namespace WebAPI.Controllers
                     var produtoExists = await _context.Produtos.AnyAsync(p => p.ProdutoId == favorito.ProdutoId);
                     if (!produtoExists)
                     {
-                        Console.WriteLine($"[DEBUG] Produto com ID {favorito.ProdutoId} não existe.");
                         return BadRequest(new { Success = false, Message = "Produto não encontrado." });
                     }
 
@@ -81,7 +74,6 @@ namespace WebAPI.Controllers
                     favorito.Utilizador = null; // Garantir que não tentamos salvar o objeto Utilizador
                     _context.Favoritos.Add(favorito);
                     await _context.SaveChangesAsync();
-                    Console.WriteLine("[DEBUG] Produto adicionado aos favoritos.");
                     return Ok(new { Success = true, Message = "Produto adicionado aos favoritos." });
                 }
             }
@@ -96,7 +88,6 @@ namespace WebAPI.Controllers
         [Authorize]
         public async Task<IActionResult> GetFavoritos(int userId)
         {
-            Console.WriteLine($"[DEBUG] Buscando favoritos para o usuário {userId}");
             try
             {
                 var currentUserIdClaim = User.FindFirst("utilizadorId")?.Value;
@@ -123,7 +114,6 @@ namespace WebAPI.Controllers
                     })
                     .ToListAsync();
 
-                Console.WriteLine($"[DEBUG] Favoritos encontrados: {favoritos.Count}");
                 return Ok(new { Success = true, Data = favoritos });
             }
             catch (Exception ex)

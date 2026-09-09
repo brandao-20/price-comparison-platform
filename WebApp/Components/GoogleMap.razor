@@ -35,19 +35,21 @@ else
         {
             try
             {
-                Console.WriteLine($"[DEBUG] Iniciando carregamento do Google Maps no elemento {MapElementId}");
 
                 await WaitForMapsInterop();
-                Console.WriteLine("[DEBUG] mapsInterop disponível.");
 
-                var apiKey = Configuration["GoogleMapsApiKey"] ?? "SUA_CHAVE_AQUI";
-                Console.WriteLine($"[DEBUG] Usando API Key: {apiKey}");
+                var apiKey = Configuration["GoogleMapsApiKey"];
+                if (string.IsNullOrWhiteSpace(apiKey))
+                {
+                    mapLoadFailed = true;
+                    errorMessage = "Google Maps is not configured.";
+                    StateHasChanged();
+                    return;
+                }
 
                 await JS.InvokeVoidAsync("mapsInterop.loadGoogleMaps", apiKey);
-                Console.WriteLine("[DEBUG] Script do Google Maps solicitado.");
 
                 await WaitForGoogleMaps();
-                Console.WriteLine("[DEBUG] Google Maps API carregada com sucesso.");
 
                 _objectRef = DotNetObjectReference.Create(this);
                 await JS.InvokeVoidAsync(
@@ -57,15 +59,14 @@ else
                     MapElementId,
                     _objectRef
                 );
-                Console.WriteLine("[DEBUG] Mapa inicializado com sucesso.");
 
                 await OnMapInitialized.InvokeAsync(MapElementId);
             }
-            catch (JSException ex)
+            catch (JSException)
             {
                 mapLoadFailed = true;
-                errorMessage = $"Erro ao carregar o mapa: {ex.Message}. Verifique se o script mapsInterop.js está carregado e a chave da API está correta.";
-                Console.WriteLine($"[ERROR] Erro ao carregar o mapa: {ex.Message}");
+                errorMessage = "Google Maps could not be loaded. Please try again later.";
+                Console.Error.WriteLine("Google Maps initialization failed.");
                 StateHasChanged();
             }
         }
@@ -82,11 +83,9 @@ else
                 bool isUndefined = await JS.InvokeAsync<bool>("eval", "typeof window.mapsInterop === 'undefined' || typeof window.mapsInterop.loadGoogleMaps === 'undefined'");
                 if (!isUndefined)
                 {
-                    Console.WriteLine("[DEBUG] mapsInterop encontrado após " + (attempts + 1) + " tentativas.");
                     break;
                 }
 
-                Console.WriteLine($"[DEBUG] Aguardando mapsInterop... Tentativa {attempts + 1}/{maxAttempts}");
                 if (attempts++ >= maxAttempts)
                 {
                     throw new JSException("Timeout: mapsInterop não foi carregado.");
@@ -95,7 +94,7 @@ else
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DEBUG] Erro ao verificar mapsInterop na tentativa {attempts + 1}: {ex.Message}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                 if (attempts++ >= maxAttempts)
                 {
                     throw new JSException("Timeout: mapsInterop não foi carregado. Erro: " + ex.Message);
@@ -111,7 +110,6 @@ else
         const int maxAttempts = 200;
         while (await JS.InvokeAsync<bool>("eval", "typeof google === 'undefined' || typeof google.maps === 'undefined' || !window.googleMapsLoaded"))
         {
-            Console.WriteLine($"[DEBUG] Aguardando Google Maps API... Tentativa {attempts + 1}/{maxAttempts}");
             if (attempts++ >= maxAttempts)
             {
                 throw new JSException("Timeout: Google Maps API não carregou.");

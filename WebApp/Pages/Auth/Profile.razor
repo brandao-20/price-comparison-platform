@@ -141,25 +141,9 @@ else
 
         try
         {
-            // Carregar pontos do utilizador
-            var userResponse = await Http.GetAsync($"api/Utilizadores/adminget/{AuthService.UserId}");
-            if (userResponse.IsSuccessStatusCode)
-            {
-                var userApiResponse = await userResponse.Content.ReadFromJsonAsync<ApiResponse<Utilizador>>();
-                if (userApiResponse?.Success == true)
-                {
-                    userPontos = userApiResponse.Data?.Pontos ?? 0;
-                    Console.WriteLine($"[DEBUG] Pontos do utilizador carregados: {userPontos}");
-                }
-                else
-                {
-                    Console.WriteLine("[DEBUG] Falha ao carregar pontos do utilizador: resposta não bem-sucedida.");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"[DEBUG] Erro ao carregar pontos do utilizador: Status {userResponse.StatusCode}");
-            }
+            // The authenticated account can read its own profile and points.
+            var profile = await Http.GetFromJsonAsync<Utilizador>($"api/Utilizadores/{AuthService.UserId}");
+            userPontos = profile?.Pontos ?? 0;
 
             // Carregar ranking (apenas para Admins)
             if (AuthService.IsAdmin)
@@ -171,23 +155,18 @@ else
                     if (rankingApiResponse?.Success == true)
                     {
                         ranking = rankingApiResponse.Data ?? new List<RankingDto>();
-                        Console.WriteLine($"[DEBUG] Ranking carregado: {ranking.Count} utilizadores.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("[DEBUG] Falha ao carregar ranking: resposta não bem-sucedida.");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"[DEBUG] Erro ao carregar ranking: Status {rankingResponse.StatusCode}");
+                    Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                 }
             }
         }
         catch (Exception ex)
         {
             ShowPopup($"Erro ao carregar dados do perfil: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Exceção ao carregar dados do perfil: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 
@@ -227,7 +206,7 @@ else
         catch (Exception ex)
         {
             ShowPopup($"Erro inesperado ao remover a conta: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Exceção ao remover conta: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
 
         showConfirm = false;

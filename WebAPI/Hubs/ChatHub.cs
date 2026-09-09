@@ -25,33 +25,22 @@ namespace WebAPI.Hubs
 
         public override async Task OnConnectedAsync()
         {
-            var userId = int.Parse(Context.User?.FindFirst("utilizadorId")?.Value ?? "0");
+            var userId = GetUserId();
             if (userId != 0)
             {
-                Console.WriteLine($"[DEBUG] Utilizador {userId} conectado ao SignalR via {Context.Features.Get<IHttpTransportFeature>()?.TransportType}");
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
-            }
-            else
-            {
-                Console.WriteLine("[ERROR] Utilizador não identificado ao conectar ao SignalR.");
             }
             await base.OnConnectedAsync();
         }
 
-        public override async Task OnDisconnectedAsync(Exception exception)
-        {
-            var userId = int.Parse(Context.User?.FindFirst("utilizadorId")?.Value ?? "0");
-            Console.WriteLine($"[DEBUG] Utilizador {userId} desconectado do SignalR. Erro: {exception?.Message}");
-            await base.OnDisconnectedAsync(exception);
-        }
-
         public async Task SendMessage(int destinatarioId, string message)
         {
-            var remetenteId = int.Parse(Context.User?.FindFirst("utilizadorId")?.Value ?? "0");
+            if (destinatarioId <= 0 || string.IsNullOrWhiteSpace(message) || message.Length > 1000)
+                throw new HubException("A recipient and a message of up to 1000 characters are required.");
+            var remetenteId = GetUserId();
             var remetente = await _utilizadorRepository.GetByIdAsync(remetenteId);
             if (remetente == null)
             {
-                Console.WriteLine($"[ERROR] Remetente {remetenteId} não encontrado.");
                 return;
             }
 
@@ -64,9 +53,16 @@ namespace WebAPI.Hubs
             };
 
             await _chatService.SendMessageAsync(mensagem);
-            Console.WriteLine($"[DEBUG] Mensagem enviada de {remetenteId} para {destinatarioId}: {message}");
         }
 
+        private int GetUserId()
+        {
+            if (!int.TryParse(Context.User?.FindFirst("utilizadorId")?.Value, out var userId) || userId <= 0)
+                throw new HubException("The authenticated user is invalid.");
+            return userId;
+        }
+
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task NotifyPriceChange(int produtoId, decimal preco)
         {
             var favoritos = await _context.Favoritos
@@ -77,7 +73,6 @@ namespace WebAPI.Hubs
             {
                 await Clients.Group($"user-{userId}").SendAsync("PriceChanged", produtoId, preco);
             }
-            Console.WriteLine($"[DEBUG] Notificação de mudança de preço enviada para produto {produtoId}: {preco:C}");
         }
     }
 }

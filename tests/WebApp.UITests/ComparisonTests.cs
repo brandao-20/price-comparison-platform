@@ -12,14 +12,25 @@ namespace WebApp.UITests
         [SetUp]
         public void Login()
         {
+            var username = "comparison" + Guid.NewGuid().ToString("N")[..12];
+            var password = Guid.NewGuid().ToString("N");
+            Driver.Navigate().GoToUrl(AppUrl + "/register");
+            var wait = new WebDriverWait(Driver, TimeSpan.FromSeconds(15));
+            wait.Until(d => d.FindElements(By.CssSelector("input.form-control")).Count >= 3);
+            var registration = Driver.FindElements(By.CssSelector("input.form-control"));
+            registration[0].SendKeys(username);
+            registration[1].SendKeys(username + "@example.com");
+            registration[2].SendKeys(password);
+            Driver.FindElement(By.CssSelector("button.btn.btn-primary")).Click();
+            wait.Until(d => d.Url.Contains("/login"));
             Driver.Navigate().GoToUrl(AppUrl + "/login");
 
             new WebDriverWait(Driver, TimeSpan.FromSeconds(15))
                 .Until(d => d.FindElements(By.CssSelector("input.form-control")).Count >= 2);
 
             var inputs = Driver.FindElements(By.CssSelector("input.form-control"));
-            inputs[0].SendKeys("gabriel");
-            inputs[1].SendKeys("batata");
+            inputs[0].SendKeys(username);
+            inputs[1].SendKeys(password);
             Driver.FindElement(By.CssSelector("button.btn.btn-primary")).Click();
 
             new WebDriverWait(Driver, TimeSpan.FromSeconds(15))

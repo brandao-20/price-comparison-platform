@@ -208,16 +208,13 @@ else
 
         try
         {
-            Console.WriteLine($"[DEBUG] Carregando detalhes do produto com ID: {Id}");
             var prodResponse = await Http.GetAsync($"api/Produtos/{Id}");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Produtos/{Id}: Status {prodResponse.StatusCode}");
             if (prodResponse.IsSuccessStatusCode)
             {
                 var apiResponse = await prodResponse.Content.ReadFromJsonAsync<ApiResponse<Produto>>();
                 if (apiResponse?.Success == true)
                 {
                     produto = apiResponse.Data;
-                    Console.WriteLine($"[DEBUG] Produto carregado: {produto?.Nome}");
                 }
                 else
                 {
@@ -231,16 +228,13 @@ else
                 ShowPopup("Erro ao carregar os detalhes do produto. Tente novamente mais tarde.", MessagePopup.MessageType.Error);
             }
 
-            Console.WriteLine($"[DEBUG] Carregando credibilidade ajustada para o produto com ID: {Id}");
             var credibilidadeResponse = await Http.GetAsync($"api/Produtos/{Id}/credibilidade");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Produtos/{Id}/credibilidade: Status {credibilidadeResponse.StatusCode}");
             if (credibilidadeResponse.IsSuccessStatusCode)
             {
                 var apiResponse = await credibilidadeResponse.Content.ReadFromJsonAsync<ApiResponse<CredibilidadeResponse>>();
                 if (apiResponse?.Success == true)
                 {
                     credibilidade = apiResponse.Data?.Credibilidade;
-                    Console.WriteLine($"[DEBUG] Credibilidade carregada: {credibilidade}");
                 }
                 else
                 {
@@ -254,9 +248,7 @@ else
                 ShowPopup("Erro ao carregar a credibilidade. Tente novamente mais tarde.", MessagePopup.MessageType.Error);
             }
 
-            Console.WriteLine($"[DEBUG] Carregando registos de preços para o produto com ID: {Id}");
             var regResponse = await Http.GetAsync($"api/RegistosPrecos/produto/{Id}");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/RegistosPrecos/produto/{Id}: Status {regResponse.StatusCode}");
             if (regResponse.IsSuccessStatusCode)
             {
                 var apiResponse = await regResponse.Content.ReadFromJsonAsync<ApiResponse<List<RegistosPreco>>>();
@@ -268,7 +260,6 @@ else
                         .Select(g => g.OrderByDescending(x => x.DataRegisto).First())
                         .OrderByDescending(r => r.DataRegisto)
                         .ToList();
-                    Console.WriteLine($"[DEBUG] Registros de preços carregados: {registosPrecos.Count}");
                 }
                 else
                 {
@@ -286,16 +277,13 @@ else
 
             if (AuthService.IsLoggedIn)
             {
-                Console.WriteLine($"[DEBUG] Verificando se o produto {Id} é favorito do usuário {AuthService.UserId}");
                 var favoritoResponse = await Http.GetAsync($"api/Favoritos/user/{AuthService.UserId}");
-                Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Favoritos/user/{AuthService.UserId}: Status {favoritoResponse.StatusCode}");
                 if (favoritoResponse.IsSuccessStatusCode)
                 {
                     var favoritoApiResponse = await favoritoResponse.Content.ReadFromJsonAsync<ApiResponse<List<Favorito>>>();
                     if (favoritoApiResponse?.Success == true)
                     {
                         isFavorite = favoritoApiResponse.Data?.Any(f => f.ProdutoId == Id) ?? false;
-                        Console.WriteLine($"[DEBUG] Produto é favorito: {isFavorite}");
                     }
                     else
                     {
@@ -318,7 +306,7 @@ else
             DistinctByLojaRegistos = new List<RegistosPreco>();
             credibilidade = null;
             ShowPopup($"Erro inesperado ao carregar os dados: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Exceção ao carregar dados: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
         finally
         {
@@ -334,9 +322,7 @@ else
 
         try
         {
-            Console.WriteLine($"[DEBUG] Tentando carregar o gráfico de preços para o produto {Id}");
             var historyResponse = await Http.GetAsync($"api/Relatorios/produtos/{Id}/pricehistory?groupByStore=true");
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Relatorios/produtos/{Id}/pricehistory: Status {historyResponse.StatusCode}");
 
             if (historyResponse.IsSuccessStatusCode)
             {
@@ -344,44 +330,27 @@ else
                 if (historyApiResponse?.Success == true)
                 {
                     historicoPrecos = historyApiResponse.Data;
-                    Console.WriteLine($"[DEBUG] Dados do gráfico recebidos: {historicoPrecos?.Count ?? 0} entradas");
 
-                    if (historicoPrecos != null && historicoPrecos.Any(h => h.Prices != null && h.Prices.Any()))
+                    if (historicoPrecos == null || !historicoPrecos.Any(h => h.Prices != null && h.Prices.Any()))
                     {
-                        foreach (var history in historicoPrecos)
-                        {
-                            Console.WriteLine($"[DEBUG] Loja: {history.LojaNome}, Preços: {history.Prices?.Count ?? 0}");
-                            if (history.Prices != null)
-                            {
-                                foreach (var price in history.Prices)
-                                {
-                                    Console.WriteLine($"[DEBUG] Data: {price.Date}, Preço: {price.Price}");
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("[DEBUG] Nenhum dado de histórico de preços encontrado para o produto.");
                         ShowPopup("Nenhum histórico de preços disponível para este produto.", MessagePopup.MessageType.Info);
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"[DEBUG] Falha na resposta do endpoint: {historyApiResponse?.Message}");
                     ShowPopup(historyApiResponse?.Message ?? "Erro ao carregar o histórico de preços.", MessagePopup.MessageType.Error);
                 }
             }
             else
             {
                 var errorContent = await historyResponse.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG] Erro ao chamar o endpoint: Status {historyResponse.StatusCode}, Conteúdo: {errorContent}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
                 ShowPopup("Erro ao carregar o histórico de preços.", MessagePopup.MessageType.Error);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[DEBUG] Exceção ao carregar o gráfico: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             ShowPopup($"Erro ao carregar o gráfico de preços: {ex.Message}", MessagePopup.MessageType.Error);
             historicoPrecos = null;
         }
@@ -400,7 +369,6 @@ else
     {
         if (isInitialized && produto != null && historicoPrecos != null && historicoPrecos.Any(h => h.Prices != null && h.Prices.Any()))
         {
-            Console.WriteLine("[DEBUG] OnAfterRenderAsync chamado, verificando se o gráfico pode ser renderizado...");
             await RenderizarGrafico();
         }
     }
@@ -410,22 +378,19 @@ else
         try
         {
             var canvasExists = await JSRuntime.InvokeAsync<bool>("eval", "!!document.getElementById('priceChart')");
-            Console.WriteLine($"[DEBUG] Canvas 'priceChart' existe: {canvasExists}");
 
             if (canvasExists)
             {
                 await JSRuntime.InvokeVoidAsync("renderPriceChart", historicoPrecos);
-                Console.WriteLine("[DEBUG] Gráfico renderizado com sucesso.");
             }
             else
             {
-                Console.WriteLine("[DEBUG] Canvas 'priceChart' não encontrado no DOM.");
                 ShowPopup("Erro ao renderizar o gráfico: elemento canvas não encontrado.", MessagePopup.MessageType.Error);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Erro ao renderizar o gráfico: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             ShowPopup("Erro ao renderizar o gráfico.", MessagePopup.MessageType.Error);
         }
     }
@@ -440,10 +405,8 @@ else
 
         try
         {
-            Console.WriteLine($"[DEBUG] Tentando favoritar/desfavoritar o produto {Id} para o usuário {AuthService.UserId}");
             var favorito = new Favorito { ProdutoId = Id, UtilizadorId = AuthService.UserId };
             var response = await Http.PostAsJsonAsync("api/Favoritos", favorito);
-            Console.WriteLine($"[DEBUG] Resposta do endpoint /api/Favoritos: Status {response.StatusCode}");
             if (response.IsSuccessStatusCode)
             {
                 var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<object>>();
@@ -451,25 +414,23 @@ else
                 {
                     isFavorite = !isFavorite;
                     ShowPopup(apiResponse.Message, MessagePopup.MessageType.Success);
-                    Console.WriteLine($"[DEBUG] Favoritar/desfavoritar bem-sucedido: {apiResponse.Message}");
                 }
                 else
                 {
                     ShowPopup(apiResponse?.Message ?? "Erro ao favoritar/desfavoritar o produto.", MessagePopup.MessageType.Error);
-                    Console.WriteLine($"[DEBUG] Falha ao favoritar/desfavoritar: {apiResponse?.Message}");
                 }
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 ShowPopup($"Erro ao favoritar/desfavoritar o produto: Status {response.StatusCode}", MessagePopup.MessageType.Error);
-                Console.WriteLine($"[DEBUG] Erro ao chamar /api/Favoritos: Status {response.StatusCode}, Conteúdo: {errorContent}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             }
         }
         catch (Exception ex)
         {
             ShowPopup($"Erro inesperado ao favoritar/desfavoritar: {ex.Message}", MessagePopup.MessageType.Error);
-            Console.WriteLine($"[DEBUG] Exceção ao favoritar/desfavoritar: {ex.Message}\n{ex.StackTrace}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
         await InvokeAsync(StateHasChanged);
     }

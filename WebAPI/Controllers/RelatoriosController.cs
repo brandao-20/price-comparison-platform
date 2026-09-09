@@ -33,21 +33,16 @@ namespace WebAPI.Controllers
         [HttpGet("lojas")]
         public async Task<ActionResult<IEnumerable<LojaReportDto>>> GetLojasReport()
         {
-            Console.WriteLine("[DEBUG] Iniciando GetLojasReport...");
             try
             {
                 var lojas = await _lojaRepository.GetAllWithDetailsAsync();
-                Console.WriteLine($"[DEBUG] Total de lojas encontradas: {lojas.Count()}");
 
                 var registos = await _registosPrecoRepository.GetAllWithDetailsAsync();
-                Console.WriteLine($"[DEBUG] Total de registros de preços encontrados: {registos.Count()}");
-                Console.WriteLine($"[DEBUG] Registros com Produto válido: {registos.Count(r => r.Produto != null)}");
 
                 var report = new List<LojaReportDto>();
 
                 foreach (var loja in lojas)
                 {
-                    Console.WriteLine($"[DEBUG] Processando loja: {loja.Nome} (LojaId: {loja.LojaId})");
 
                     var produtosInfo = registos
                         .Where(r => r.LojaId == loja.LojaId && r.Produto != null)
@@ -60,7 +55,6 @@ namespace WebAPI.Controllers
                             LatestDate = g.OrderByDescending(r => r.DataRegisto).First().DataRegisto
                         })
                         .ToList();
-                    Console.WriteLine($"[DEBUG] Produtos encontrados para LojaId {loja.LojaId}: {produtosInfo.Count}");
 
                     var categoriaCounts = registos
                         .Where(r => r.LojaId == loja.LojaId && r.Produto != null && r.Produto.Categoria != null)
@@ -72,7 +66,6 @@ namespace WebAPI.Controllers
                             Count = g.Select(r => r.ProdutoId).Distinct().Count()
                         })
                         .ToList();
-                    Console.WriteLine($"[DEBUG] Categorias encontradas para LojaId {loja.LojaId}: {categoriaCounts.Count}");
 
                     report.Add(new LojaReportDto
                     {
@@ -91,31 +84,27 @@ namespace WebAPI.Controllers
                     });
                 }
 
-                Console.WriteLine($"[DEBUG] Relatório de lojas gerado com sucesso: {report.Count} lojas.");
                 return Ok(report);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] Erro ao gerar relatório de lojas: {ex.Message}\n{ex.StackTrace}");
-                return StatusCode(500, new { Message = "Erro ao gerar relatório de lojas.", Detail = ex.Message });
+                return StatusCode(500, new { Message = "Erro ao gerar relatório de lojas." });
             }
         }
 
         [HttpGet("lojas/{lojaId:int}")]
         public async Task<ActionResult<LojaReportDto>> GetLojaReport(int lojaId)
         {
-            Console.WriteLine($"[DEBUG] Iniciando GetLojaReport para LojaId: {lojaId}");
             try
             {
                 var loja = await _lojaRepository.GetByIdWithDetailsAsync(lojaId);
                 if (loja == null)
                 {
-                    Console.WriteLine($"[DEBUG] Loja com ID {lojaId} não encontrada.");
                     return NotFound($"Loja com ID {lojaId} não encontrada.");
                 }
 
                 var registos = await _registosPrecoRepository.GetAllWithDetailsAsync();
-                Console.WriteLine($"[DEBUG] Total de registros de preços encontrados: {registos.Count()}");
 
                 var produtosInfo = registos
                     .Where(r => r.LojaId == lojaId && r.Produto != null)
@@ -128,7 +117,6 @@ namespace WebAPI.Controllers
                         LatestDate = g.OrderByDescending(r => r.DataRegisto).First().DataRegisto
                     })
                     .ToList();
-                Console.WriteLine($"[DEBUG] Produtos encontrados para LojaId {lojaId}: {produtosInfo.Count}");
 
                 var categoriaCounts = registos
                     .Where(r => r.LojaId == lojaId && r.Produto != null && r.Produto.Categoria != null)
@@ -140,7 +128,6 @@ namespace WebAPI.Controllers
                         Count = g.Select(r => r.ProdutoId).Distinct().Count()
                     })
                     .ToList();
-                Console.WriteLine($"[DEBUG] Categorias encontradas para LojaId {lojaId}: {categoriaCounts.Count}");
 
                 var dto = new LojaReportDto
                 {
@@ -158,13 +145,12 @@ namespace WebAPI.Controllers
                     Produtos = produtosInfo
                 };
 
-                Console.WriteLine($"[DEBUG] Relatório para LojaId {lojaId} gerado com sucesso.");
                 return Ok(dto);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] Erro ao gerar relatório para LojaId {lojaId}: {ex.Message}\n{ex.StackTrace}");
-                return StatusCode(500, new { Message = "Erro ao gerar relatório da loja.", Detail = ex.Message });
+                return StatusCode(500, new { Message = "Erro ao gerar relatório da loja." });
             }
         }
 
@@ -179,26 +165,23 @@ namespace WebAPI.Controllers
                     ProdutoId = p.ProdutoId,
                     Nome = p.Nome
                 }).ToList();
-                Console.WriteLine($"[DEBUG] Total de produtos encontrados: {produtoDtos.Count}");
                 return Ok(produtoDtos);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] Erro ao listar produtos: {ex.Message}\n{ex.StackTrace}");
-                return StatusCode(500, new { Message = "Erro ao listar produtos.", Detail = ex.Message });
+                return StatusCode(500, new { Message = "Erro ao listar produtos." });
             }
         }
 
         [HttpGet("produtos/{produtoId:int}")]
         public async Task<ActionResult<ProdutoReportDto>> GetProdutoReport(int produtoId)
         {
-            Console.WriteLine($"[DEBUG] Iniciando GetProdutoReport para ProdutoId: {produtoId}");
             try
             {
                 var produto = await _produtoRepository.GetByIdWithDetailsAsync(produtoId);
                 if (produto == null)
                 {
-                    Console.WriteLine($"[DEBUG] Produto com ID {produtoId} não encontrado.");
                     return NotFound($"Produto com ID {produtoId} não encontrado.");
                 }
 
@@ -224,26 +207,23 @@ namespace WebAPI.Controllers
                     Lojas = lojasInfo
                 };
 
-                Console.WriteLine($"[DEBUG] Relatório para ProdutoId {produtoId} gerado com sucesso.");
                 return Ok(dto);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] Erro ao gerar relatório para ProdutoId {produtoId}: {ex.Message}\n{ex.StackTrace}");
-                return StatusCode(500, new { Message = "Erro ao gerar relatório do produto.", Detail = ex.Message });
+                return StatusCode(500, new { Message = "Erro ao gerar relatório do produto." });
             }
         }
 
         [HttpGet("produtos/{produtoId}/pricehistory")]
         public async Task<IActionResult> GetPriceHistory(int produtoId, [FromQuery] bool groupByStore = false)
         {
-            Console.WriteLine($"[DEBUG] Buscando histórico de preços para ProdutoId: {produtoId}, GroupByStore: {groupByStore}");
             try
             {
                 var produtoExists = await _context.Produtos.AnyAsync(p => p.ProdutoId == produtoId);
                 if (!produtoExists)
                 {
-                    Console.WriteLine($"[DEBUG] Produto com ID {produtoId} não encontrado.");
                     return NotFound(new ApiResponse<List<PriceHistoryDto>>
                     {
                         Success = false,
@@ -252,7 +232,6 @@ namespace WebAPI.Controllers
                     });
                 }
 
-                Console.WriteLine("[DEBUG] Executando query para buscar registros de preços...");
                 var registos = await _context.RegistosPrecos
                     .Where(r => r.ProdutoId == produtoId)
                     .Include(r => r.Loja)
@@ -264,11 +243,9 @@ namespace WebAPI.Controllers
                     })
                     .ToListAsync();
 
-                Console.WriteLine($"[DEBUG] Total de registros encontrados: {registos.Count}");
 
                 if (!registos.Any())
                 {
-                    Console.WriteLine($"[DEBUG] Nenhum registro de preço encontrado para ProdutoId: {produtoId}");
                     return Ok(new ApiResponse<List<PriceHistoryDto>>
                     {
                         Success = true,
@@ -318,7 +295,6 @@ namespace WebAPI.Controllers
                         .ToList();
                 }
 
-                Console.WriteLine($"[DEBUG] Histórico de preços encontrado: {priceHistory.Count} entradas");
                 return Ok(new ApiResponse<List<PriceHistoryDto>>
                 {
                     Success = true,

@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using WebAPI.Helpers;
 
 #nullable disable
 
@@ -80,17 +79,8 @@ namespace WebAPI.Migrations
                 );
                 ");
 
-            var adminPasswordHash = PasswordHelper.HashPassword("admin123");
-            migrationBuilder.Sql(
-                $@"INSERT INTO ""Utilizadores"" (""UtilizadorId"", ""Username"", ""Email"", ""Password"", ""TipoUtilizadorId"", ""DataCriacao"", ""Cargo"", ""GoogleToken"", ""Telefone"", ""GoogleId"", ""Pontos"")
-                SELECT COALESCE((SELECT MAX(""UtilizadorId"") FROM ""Utilizadores""), 0) + 1, 'admin', 'admin@example.com', '{adminPasswordHash}', 
-                       (SELECT ""TipoUtilizadorId"" FROM ""TipoUtilizador"" WHERE ""Tipo"" = 'ADMIN'), 
-                       CURRENT_TIMESTAMP, NULL, NULL, NULL, NULL, 0
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM ""Utilizadores"" u
-                    JOIN ""TipoUtilizador"" t ON u.""TipoUtilizadorId"" = t.""TipoUtilizadorId""
-                    WHERE t.""Tipo"" = 'ADMIN'
-                );");
+            // Administrator credentials belong in optional runtime bootstrap, never in migration SQL.
+
         }
 
         /// <inheritdoc />

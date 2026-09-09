@@ -40,8 +40,11 @@ else
             <div class="mb-3">
                 <label>Cargo (TipoUtilizador):</label>
                 <select class="form-select" @bind="usuario.Tipo">
-                    <option value="Admin">Admin</option>
-                    <option value="UserManager">UserManager</option>
+                    @if (AuthService.IsAdmin)
+                    {
+                        <option value="Admin">Admin</option>
+                        <option value="UserManager">UserManager</option>
+                    }
                     <option value="User">User</option>
                 </select>
             </div>

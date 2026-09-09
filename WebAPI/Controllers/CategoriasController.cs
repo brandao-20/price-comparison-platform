@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebAPI.Entities;
 using WebAPI.Repositories;
@@ -37,10 +37,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<CategoriasController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<IEnumerable<Categoria>>
                 {
                     Success = false,
-                    Message = $"Erro ao carregar as categorias: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -85,10 +86,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<CategoriasController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<Categoria>
                 {
                     Success = false,
-                    Message = $"Erro ao buscar a categoria com ID {id}: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -96,14 +98,9 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<Categoria>>> Create(Categoria categoria)
         {
-            // Log do utilizador autenticado e papéis
-            var userName = User.Identity?.Name ?? "Não autenticado";
-            var userId = User.FindFirst("utilizadorId")?.Value ?? "Desconhecido";
-            var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-            Console.WriteLine($"[DEBUG] Tentativa de criar categoria - Utilizador: {userName}, ID: {userId}, Papéis: [{string.Join(", ", roles)}]");
 
             try
             {
@@ -144,10 +141,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<CategoriasController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<Categoria>
                 {
                     Success = false,
-                    Message = $"Erro ao criar a categoria: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -155,14 +153,9 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<object>>> Update(int id, Categoria categoria)
         {
-            // Log do utilizador autenticado e papéis
-            var userName = User.Identity?.Name ?? "Não autenticado";
-            var userId = User.FindFirst("utilizadorId")?.Value ?? "Desconhecido";
-            var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-            Console.WriteLine($"[DEBUG] Tentativa de atualizar categoria - Utilizador: {userName}, ID: {userId}, Papéis: [{string.Join(", ", roles)}]");
 
             try
             {
@@ -235,10 +228,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<CategoriasController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao atualizar a categoria com ID {id}: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });
@@ -246,14 +240,9 @@ namespace WebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<object>>> Delete(int id)
         {
-            // Log do utilizador autenticado e papéis
-            var userName = User.Identity?.Name ?? "Não autenticado";
-            var userId = User.FindFirst("utilizadorId")?.Value ?? "Desconhecido";
-            var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-            Console.WriteLine($"[DEBUG] Tentativa de remover categoria - Utilizador: {userName}, ID: {userId}, Papéis: [{string.Join(", ", roles)}]");
 
             try
             {
@@ -303,10 +292,11 @@ namespace WebAPI.Controllers
             }
             catch (Exception ex)
             {
+                HttpContext.RequestServices.GetRequiredService<ILogger<CategoriasController>>().LogError(ex, "The request failed.");
                 return StatusCode(500, new ApiResponse<object>
                 {
                     Success = false,
-                    Message = $"Erro ao excluir a categoria com ID {id}: {ex.Message}",
+                    Message = "The request could not be completed. Please try again later.",
                     StatusCode = 500,
                     Data = null
                 });

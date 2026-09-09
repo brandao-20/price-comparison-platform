@@ -2,12 +2,12 @@ using WebAPI.Entities;
 
 namespace WebAPI.Observers
 {
-    public class MockEmailObserver : IMessageObserver
+    public class MockEmailObserver(ILogger<MockEmailObserver> logger) : IMessageObserver
     {
         public async Task NotifyAsync(Mensagem mensagem)
         {
-            // Simula o envio de um e-mail (lógica real seria integrada com um serviço de e-mail)
-            Console.WriteLine($"[DEBUG] E-mail simulado para utilizador {mensagem.DestinatarioId}: Nova mensagem de {mensagem.RemetenteId}: {mensagem.Conteudo}");
+            // Demonstration observer only; no email is sent.
+            logger.LogDebug("Mock email notification observed; no email was sent.");
             await Task.CompletedTask;
         }
     }

@@ -1,18 +1,9 @@
 @page "/"
-@using System.Web
-@using System.IdentityModel.Tokens.Jwt
-@using System.Security.Claims
 @inject NavigationManager NavManager
-@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
 @inject WebApp.Services.AuthService AuthService
-@inject NavigationManager Navigation
 @using WebApp.Pages.ChatBot
 
 <div style="position: relative; min-height: calc(100vh - 3.5rem);">
-    @if (!string.IsNullOrEmpty(message))
-    {
-        <p style="color: green">@message</p>
-    }
 
     @if (AuthService.IsLoggedIn)
     {
@@ -29,40 +20,11 @@
 </div>
 
 @code {
-    private string? message;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        var uri = new Uri(NavManager.Uri);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        var googleToken = query.Get("googleToken");
-
-        if (!string.IsNullOrEmpty(googleToken))
-        {
-            await LocalStorage.SetItemAsync("authToken", googleToken);
-            AuthService.Token = googleToken;
-
-            var handler = new JwtSecurityTokenHandler();
-            var jwt = handler.ReadJwtToken(googleToken);
-
-            var userName = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "GoogleUser";
-            var role = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value ?? "USER";
-            AuthService.UserName = userName;
-            AuthService.Role = role;
-
-            var userIdClaim = jwt.Claims.FirstOrDefault(c => c.Type == "utilizadorId")?.Value;
-            if (int.TryParse(userIdClaim, out int parsedId))
-            {
-                AuthService.UserId = parsedId;
-            }
-
-            message = "Autenticado via Google!";
-        }
-
         if (AuthService.IsLoggedIn)
-        {
             RedirectToHome();
-        }
     }
 
     private void RedirectToHome()

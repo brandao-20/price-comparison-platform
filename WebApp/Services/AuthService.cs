@@ -26,46 +26,25 @@ namespace WebApp.Services
             UserId = 0;
         }
 
-        /// Valida o token verificando a data de expiração (claim "exp").
-        /// Se o token estiver expirado, limpa os dados e retorna false.
+        // This is a client-side expiry check only. The API validates signatures and authorization.
         public bool ValidateToken()
         {
-            if (string.IsNullOrEmpty(Token))
-                return false;
-
             try
             {
-                var handler = new JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadJwtToken(Token);
-
-                // O claim "exp" é um número que representa o UnixTime
-                var expClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp)?.Value;
-                if (expClaim != null)
+                if (!string.IsNullOrEmpty(Token))
                 {
-                    if (long.TryParse(expClaim, out long exp))
-                    {
-                        var expDate = DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
-                        if (expDate < DateTime.UtcNow)
-                        {
-                            // Token expirado
-                            Clear();
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        // Se não conseguir converter, o token é considerado inválido
-                        Clear();
-                        return false;
-                    }
+                    var jwt = new JwtSecurityTokenHandler().ReadJwtToken(Token);
+                    var value = jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp)?.Value;
+                    if (long.TryParse(value, out var exp) && DateTimeOffset.FromUnixTimeSeconds(exp) > DateTimeOffset.UtcNow)
+                        return true;
                 }
-                return true;
             }
             catch (Exception)
             {
-                Clear();
-                return false;
+                // Invalid tokens must not leave stale UI identity behind.
             }
+            Clear();
+            return false;
         }
     }
 }

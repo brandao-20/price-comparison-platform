@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WebAPI.Entities;
 using WebAPI.Repositories;
 
@@ -30,6 +31,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task<ActionResult<WebAPI.Entities.Localizacao>> Create([FromBody] WebAPI.Entities.Localizacao localizacao)
         {
             await _localizacaoRepository.AddAsync(localizacao);
@@ -37,6 +39,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task<IActionResult> Update(int id, [FromBody] WebAPI.Entities.Localizacao localizacao)
         {
             if (id != localizacao.LocalizacaoId) return BadRequest();
@@ -53,6 +56,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,UserManager")]
         public async Task<IActionResult> Delete(int id)
         {
             var localizacao = await _localizacaoRepository.GetByIdAsync(id);

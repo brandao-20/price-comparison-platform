@@ -14,7 +14,7 @@
         if (firstRender)
         {
             await LoadGoogleMaps();
-            await InitializeStreetView();
+            if (googleMapsLoaded) await InitializeStreetView();
         }
     }
 
@@ -22,7 +22,8 @@
     {
         try
         {
-            var apiKey = Configuration["GoogleMapsApiKey"] ?? "SUA_CHAVE_AQUI";
+            var apiKey = Configuration["GoogleMapsApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey)) return;
             if (!googleMapsLoaded)
             {
                 await JSRuntime.InvokeVoidAsync("mapsInterop.loadGoogleMaps", apiKey);
@@ -30,9 +31,9 @@
             }
             await WaitForGoogleMaps();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Erro ao carregar Google Maps API: {ex.Message}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 
@@ -47,15 +48,13 @@
                 var loaded = await JSRuntime.InvokeAsync<bool>("eval", "typeof google !== 'undefined' && typeof google.maps !== 'undefined' && window.googleMapsLoaded === true");
                 if (loaded)
                 {
-                    Console.WriteLine("[DEBUG] Google Maps API carregada com sucesso para Street View.");
                     return;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"[DEBUG] Erro ao verificar Google Maps API: {ex.Message}");
+                Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
             }
-            Console.WriteLine($"[DEBUG] Aguardando Google Maps API para Street View... Tentativa {attempts + 1}/{maxAttempts}");
             await Task.Delay(100);
             attempts++;
         }
@@ -67,11 +66,10 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("mapsInterop.initStreetView", MapId, (double)Latitude, (double)Longitude);
-            Console.WriteLine($"[DEBUG] Street View inicializado para Lat: {Latitude}, Lng: {Longitude}");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"[DEBUG] Erro ao inicializar Street View: {ex.Message}");
+            Console.Error.WriteLine("The operation failed. Check the API or browser network diagnostics.");
         }
     }
 }

@@ -6,6 +6,10 @@ The application allows users to explore products, compare prices across stores, 
 
 The project also explores software architecture patterns, authentication, reporting, export strategies and automated testing.
 
+![Running price comparison view with two fictional stores and seven days of price history](docs/images/price-comparison.png)
+
+*Real application screenshot using fictional demonstration data. These prices are not live retail offers. See [demo and capture instructions](docs/demo.md) to reproduce it.*
+
 ## Features
 
 ### Product Catalogue
@@ -23,6 +27,15 @@ The platform supports:
 - product search
 - product details
 - price records
+
+<details>
+<summary>View the product catalogue</summary>
+
+![Running product catalogue with five fictional sample products](docs/images/product-catalogue.png)
+
+*Administrator view of the running Blazor application, populated with fictional products.*
+
+</details>
 
 ### Price Comparison
 
@@ -225,7 +238,7 @@ Data access is abstracted through repository interfaces.
 
 Repositories are created through a central repository factory and injected into the application through ASP.NET Core dependency injection.
 
-This keeps controllers and services decoupled from direct database access.
+Repositories encapsulate reusable data access. Some controllers also query the EF Core context directly for reports, favourites, and comments.
 
 ### Repository Factory
 
@@ -415,7 +428,7 @@ Create a PostgreSQL database for the application.
 Example:
 
 ```sql
-CREATE DATABASE ES2;
+CREATE DATABASE "ES2";
 ```
 
 Create the local backend configuration file from the provided example.
@@ -444,7 +457,7 @@ Example:
 }
 ```
 
-Do not commit local credentials to the repository.
+Do not commit local credentials to the repository. Configure the required JWT settings before starting the API. See [configuration and local validation](docs/configuration.md) for environment variables, optional integrations, and explicit first-administrator bootstrap.
 
 ## Restore Dependencies
 
@@ -462,7 +475,7 @@ dotnet restore WebApp/WebApp.csproj
 
 ## Apply Database Migrations
 
-From the repository root:
+For a fresh database, run from the repository root. Existing databases with manual schema changes need [migration review](docs/configuration.md#database-and-first-administrator) first.
 
 ```bash
 dotnet ef database update --project WebAPI/WebAPI.csproj
@@ -471,7 +484,7 @@ dotnet ef database update --project WebAPI/WebAPI.csproj
 If the Entity Framework CLI is not installed:
 
 ```bash
-dotnet tool install --global dotnet-ef
+dotnet tool install --global dotnet-ef --version 9.0.3
 ```
 
 ## Run the Backend
@@ -483,6 +496,8 @@ dotnet run --project WebAPI/WebAPI.csproj
 When running in development mode, Swagger is available through the backend's configured development URL.
 
 ## Run the Frontend
+
+Copy `WebApp/wwwroot/appsettings.example.json` to the ignored `WebApp/wwwroot/appsettings.json`. Set `ApiBaseUrl` if the API uses a different address. The optional Google Maps browser key belongs here; backend secrets do not.
 
 Open another terminal and run:
 
@@ -498,7 +513,7 @@ http://localhost:5116
 
 ## Google Authentication
 
-Google OAuth support requires valid application credentials.
+Google OAuth is optional. Leave both Google settings empty to use password login only. To enable Google login, configure valid application credentials and the [middleware callback URL](docs/configuration.md#google-login).
 
 Configure:
 
@@ -524,18 +539,18 @@ Example:
 ```json
 {
   "Jwt": {
-    "Key": "replace_with_a_secure_secret",
+    "Key": "REPLACE_WITH_A_RANDOM_SECRET_OF_AT_LEAST_32_BYTES",
     "Issuer": "your_issuer",
     "Audience": "your_audience"
   }
 }
 ```
 
-Use a strong signing key outside development environments.
+A unique random signing key of at least 32 UTF-8 bytes is required in every environment; placeholders and missing values are rejected. The same validated settings are used for password login, Google login, and bearer validation.
 
 ## Testing
 
-The repository contains separate test projects for backend and frontend behaviour.
+The repository contains unit tests for authentication helpers, security/configuration behaviour and export strategies, plus a separate Selenium UI test project.
 
 ### API Tests
 
@@ -545,15 +560,21 @@ dotnet test tests/WebAPI.UnitTests
 
 ### UI Tests
 
+Start the API and frontend against a disposable migrated PostgreSQL database first. Chrome is required; Selenium Manager resolves a matching driver. Tests create local accounts. See [test prerequisites](docs/configuration.md#tests) for URL overrides and comparison data.
+
 ```bash
 dotnet test tests/WebApp.UITests
 ```
 
-### Run All Tests
+### Run Solution Tests
 
 ```bash
 dotnet test
 ```
+
+The solution runs the unit test project. Run the Selenium project separately with the command above.
+
+The [hardening and validation record](docs/hardening-review.md) explains the security changes, migration repair, checks performed, and remaining limitations. Screenshot capture is an explicit opt-in test, documented in the [demo guide](docs/demo.md).
 
 ## API Development
 
@@ -576,14 +597,16 @@ The application includes authentication and role-aware functionality, but local 
 
 Before deploying publicly:
 
-- replace development JWT secrets
-- remove sensitive debug logging
+- rotate any credentials used by earlier revisions
+- keep logs and proxy query strings free of credentials
 - configure CORS for the production frontend
 - store credentials outside source control
 - use HTTPS
 - validate OAuth redirect URLs
 - protect PostgreSQL credentials
 - review authentication and authorization policies
+
+See [security notes](SECURITY.md) for the changes made and the remaining limitations.
 
 ## Design Goals
 
@@ -619,6 +642,9 @@ Both API and frontend use the .NET ecosystem while remaining independently struc
 - Google authentication requires external OAuth credentials.
 - Deployment infrastructure is not included.
 - Development configuration should be hardened before any public deployment.
+- JWTs remain in browser local storage; the Google login code store supports a single API instance.
+- The help widget is command-based, and the email observer is a simulation.
+- Legacy password hashing, login rate limiting, token revocation and price-confirmation abuse controls require further work before a public deployment; see [security notes](SECURITY.md).
 
 ## Purpose
 
